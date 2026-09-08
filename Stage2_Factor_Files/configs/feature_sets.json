@@ -1,0 +1,5 @@
+{
+  "A": ["factor_volume_confirmed_mom_5d_20d", "factor_close_pressure_5d"],
+  "B": ["factor_volume_confirmed_mom_5d_20d", "factor_close_pressure_5d", "factor_rel_mom_aapl_qqq_5d", "factor_rel_vol_aapl_qqq_10d", "factor_market_aligned_mom_5d_20d"],
+  "C": ["factor_rel_mom_aapl_qqq_5d", "factor_rel_mom_aapl_peers_5d", "factor_peer_confirmation_5d", "factor_peer_disagreement_5d", "factor_rel_vol_aapl_qqq_10d", "factor_volume_confirmed_mom_5d_20d", "factor_market_aligned_mom_5d_20d", "factor_close_pressure_5d"]
+}

@@ -1,0 +1,79 @@
+{
+  "implementation_version": "v2",
+  "rows": 250,
+  "columns": 33,
+  "date_split_counts": {
+    "train": 122,
+    "validation": 64,
+    "test": 64
+  },
+  "usable_split_counts": {
+    "train": 121,
+    "validation": 63,
+    "test": 63
+  },
+  "excluded_boundary_rows": [
+    {
+      "Date": "2025-06-30",
+      "Split": "train",
+      "target_date": "2025-07-01"
+    },
+    {
+      "Date": "2025-09-30",
+      "Split": "validation",
+      "target_date": "2025-10-01"
+    },
+    {
+      "Date": "2025-12-31",
+      "Split": "test",
+      "target_date": "2026-01-02"
+    }
+  ],
+  "missing_values": 0,
+  "duplicate_dates": 0,
+  "factor_columns": [
+    "factor_rel_mom_aapl_qqq_5d",
+    "factor_rel_mom_aapl_peers_5d",
+    "factor_peer_confirmation_5d",
+    "factor_peer_disagreement_5d",
+    "factor_rel_vol_aapl_qqq_10d",
+    "factor_volume_confirmed_mom_5d_20d",
+    "factor_market_aligned_mom_5d_20d",
+    "factor_close_pressure_5d"
+  ],
+  "feature_sets": {
+    "A": [
+      "factor_volume_confirmed_mom_5d_20d",
+      "factor_close_pressure_5d"
+    ],
+    "B": [
+      "factor_volume_confirmed_mom_5d_20d",
+      "factor_close_pressure_5d",
+      "factor_rel_mom_aapl_qqq_5d",
+      "factor_rel_vol_aapl_qqq_10d",
+      "factor_market_aligned_mom_5d_20d"
+    ],
+    "C": [
+      "factor_rel_mom_aapl_qqq_5d",
+      "factor_rel_mom_aapl_peers_5d",
+      "factor_peer_confirmation_5d",
+      "factor_peer_disagreement_5d",
+      "factor_rel_vol_aapl_qqq_10d",
+      "factor_volume_confirmed_mom_5d_20d",
+      "factor_market_aligned_mom_5d_20d",
+      "factor_close_pressure_5d"
+    ]
+  },
+  "input_sha256": {
+    "aligned_daily_ohlcv_5y.csv": "5972891e0f4859bccc5dfc31f600dbca026e7f25c52785f02e6846e3db7a07a7",
+    "aligned_daily_ohlcv_2025_split.csv": "0bdac629836926a2807a77f1d01705f5862cf48156b9f7a9b7f5fe34de716287"
+  },
+  "runtime": {
+    "python": "3.12.13",
+    "pandas": "2.2.3",
+    "numpy": "2.3.5"
+  },
+  "target": "1 if next trading day's adjusted AAPL Close > current Close, else 0",
+  "signal_time": "After all four markets' day-t closing OHLCV is available",
+  "evaluation": "No model training, factor selection or predictive-performance evaluation performed"
+}
