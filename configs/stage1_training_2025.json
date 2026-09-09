@@ -1,0 +1,23 @@
+{
+  "year": 2025,
+  "split": {
+    "train": [1, 2],
+    "validation": [3],
+    "test": [4],
+    "exclude_cross_partition_labels": true
+  },
+  "logistic_regression": {
+    "seed": 42,
+    "C": 1.0,
+    "max_iter": 2000,
+    "training_only_standardisation": true
+  },
+  "random_forest": {
+    "seeds": [0, 1, 2],
+    "n_estimators": 300,
+    "max_depth": 5,
+    "min_samples_leaf": 5,
+    "class_weight": "balanced"
+  },
+  "prediction_threshold": 0.5
+}
