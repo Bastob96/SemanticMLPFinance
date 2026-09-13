@@ -22,3 +22,24 @@ Future values, lead or negative shift, centred windows, target columns, test-set
 OUTPUT
 Each factor must include factor_id, name, family, hypothesis, formula, inputs, lookback_days, expected_direction, leakage_self_check, implementation_note and difference_from_baseline. Return valid JSON matching llm_factor_schema_v1.json.
 Use unique IDs and names. Set lookback_days to the largest required lag, and include exact field names in inputs. The baseline feature list has not been supplied here: describe possible overlap without claiming novelty. Expected directions are hypotheses, not findings. Do not use knowledge of specific 2025 outcomes to justify a proposal.
+
+EXACT IDENTIFIERS AND FORMULA SYNTAX
+Use these exact input identifiers only:
+AAPL_Open, AAPL_High, AAPL_Low, AAPL_Close, AAPL_Volume,
+QQQ_Open, QQQ_High, QQQ_Low, QQQ_Close, QQQ_Volume,
+MSFT_Open, MSFT_High, MSFT_Low, MSFT_Close, MSFT_Volume,
+NVDA_Open, NVDA_High, NVDA_Low, NVDA_Close, NVDA_Volume.
+
+Do not use spaces in input names.
+
+Every formula must be written only as nested function calls using the allowed operators.
+Do not use infix arithmetic symbols such as +, -, *, /.
+
+Valid examples:
+subtract(pct_change(AAPL_Close, 5), pct_change(QQQ_Close, 5))
+abs(subtract(pct_change(MSFT_Close, 3), pct_change(NVDA_Close, 3)))
+multiply(pct_change(AAPL_Close, 5), pct_change(AAPL_Volume, 20))
+safe_divide(rolling_std(pct_change(AAPL_Close, 2), 10), rolling_std(pct_change(QQQ_Close, 2), 10))
+
+The inputs array must contain exactly the identifiers referenced in formula.
+lookback_days must equal the largest numeric lookback used anywhere in formula.

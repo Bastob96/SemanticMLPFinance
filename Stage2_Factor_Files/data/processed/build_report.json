@@ -32,36 +32,32 @@
   "missing_values": 0,
   "duplicate_dates": 0,
   "factor_columns": [
-    "factor_rel_mom_aapl_qqq_5d",
-    "factor_rel_mom_aapl_peers_5d",
-    "factor_peer_confirmation_5d",
-    "factor_peer_disagreement_5d",
-    "factor_rel_vol_aapl_qqq_10d",
-    "factor_volume_confirmed_mom_5d_20d",
-    "factor_market_aligned_mom_5d_20d",
-    "factor_close_pressure_5d"
+    "peer_signed_return_confirmation",
+    "peer_return_dispersion",
+    "aapl_peer_consensus_relative_return",
+    "aapl_to_qqq_relative_realized_risk",
+    "peer_volume_confirmed_aapl_return",
+    "relative_return_market_risk_interaction",
+    "aapl_to_qqq_normalized_range_ratio",
+    "lagged_qqq_relative_momentum"
   ],
   "feature_sets": {
-    "A": [
-      "factor_volume_confirmed_mom_5d_20d",
-      "factor_close_pressure_5d"
-    ],
+    "A": [],
     "B": [
-      "factor_volume_confirmed_mom_5d_20d",
-      "factor_close_pressure_5d",
-      "factor_rel_mom_aapl_qqq_5d",
-      "factor_rel_vol_aapl_qqq_10d",
-      "factor_market_aligned_mom_5d_20d"
+      "aapl_to_qqq_relative_realized_risk",
+      "relative_return_market_risk_interaction",
+      "aapl_to_qqq_normalized_range_ratio",
+      "lagged_qqq_relative_momentum"
     ],
     "C": [
-      "factor_rel_mom_aapl_qqq_5d",
-      "factor_rel_mom_aapl_peers_5d",
-      "factor_peer_confirmation_5d",
-      "factor_peer_disagreement_5d",
-      "factor_rel_vol_aapl_qqq_10d",
-      "factor_volume_confirmed_mom_5d_20d",
-      "factor_market_aligned_mom_5d_20d",
-      "factor_close_pressure_5d"
+      "peer_signed_return_confirmation",
+      "peer_return_dispersion",
+      "aapl_peer_consensus_relative_return",
+      "aapl_to_qqq_relative_realized_risk",
+      "peer_volume_confirmed_aapl_return",
+      "relative_return_market_risk_interaction",
+      "aapl_to_qqq_normalized_range_ratio",
+      "lagged_qqq_relative_momentum"
     ]
   },
   "input_sha256": {
@@ -69,9 +65,9 @@
     "aligned_daily_ohlcv_2025_split.csv": "0bdac629836926a2807a77f1d01705f5862cf48156b9f7a9b7f5fe34de716287"
   },
   "runtime": {
-    "python": "3.12.13",
-    "pandas": "2.2.3",
-    "numpy": "2.3.5"
+    "python": "3.13.15",
+    "pandas": "2.3.3",
+    "numpy": "2.5.3"
   },
   "target": "1 if next trading day's adjusted AAPL Close > current Close, else 0",
   "signal_time": "After all four markets' day-t closing OHLCV is available",

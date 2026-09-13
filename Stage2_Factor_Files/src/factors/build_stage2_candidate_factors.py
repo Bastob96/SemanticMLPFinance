@@ -13,20 +13,25 @@ import pandas as pd
 TICKERS = ["AAPL", "QQQ", "MSFT", "NVDA"]
 OHLCV = ["Open", "High", "Low", "Close", "Volume"]
 FACTOR_COLUMNS = [
-    "factor_rel_mom_aapl_qqq_5d",
-    "factor_rel_mom_aapl_peers_5d",
-    "factor_peer_confirmation_5d",
-    "factor_peer_disagreement_5d",
-    "factor_rel_vol_aapl_qqq_10d",
-    "factor_volume_confirmed_mom_5d_20d",
-    "factor_market_aligned_mom_5d_20d",
-    "factor_close_pressure_5d",
+    "peer_signed_return_confirmation",
+    "peer_return_dispersion",
+    "aapl_peer_consensus_relative_return",
+    "aapl_to_qqq_relative_realized_risk",
+    "peer_volume_confirmed_aapl_return",
+    "relative_return_market_risk_interaction",
+    "aapl_to_qqq_normalized_range_ratio",
+    "lagged_qqq_relative_momentum",
 ]
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 RAW_COLUMNS = [f"{ticker}_{field}" for ticker in TICKERS for field in OHLCV]
 FEATURE_SETS = {
-    "A": [FACTOR_COLUMNS[i] for i in [5, 7]],
-    "B": [FACTOR_COLUMNS[i] for i in [5, 7, 0, 4, 6]],
+    "A": [],
+    "B": [
+        "aapl_to_qqq_relative_realized_risk",
+        "relative_return_market_risk_interaction",
+        "aapl_to_qqq_normalized_range_ratio",
+        "lagged_qqq_relative_momentum",
+    ],
     "C": FACTOR_COLUMNS,
 }
 
@@ -91,50 +96,111 @@ def _wide_ohlcv(history: pd.DataFrame) -> pd.DataFrame:
 
 
 def calculate_factors(wide: pd.DataFrame) -> pd.DataFrame:
-    """Only current/past rows; no labels, fitted transforms or selection."""
-    close = wide[[f"{ticker}_Close" for ticker in TICKERS]].copy()
-    close.columns = TICKERS
-    volume = wide[[f"{ticker}_Volume" for ticker in TICKERS]].copy()
-    volume.columns = TICKERS
-
-    ret_1d = close.pct_change(fill_method=None)
-    ret_5d = close.div(close.shift(5)).sub(1.0)
-    ret_20d = close.div(close.shift(20)).sub(1.0)
-    peer_ret_5d = ret_5d[["MSFT", "NVDA"]].mean(axis=1)
+    """Calculate the eight accepted Stage 2 generated factors using only data at or before t."""
     eps = 1e-12
 
+    def price_return(ticker: str, periods: int) -> pd.Series:
+        return wide[f"{ticker}_Close"].pct_change(
+            periods=periods,
+            fill_method=None,
+        )
+
+    def volume_return(ticker: str, periods: int) -> pd.Series:
+        return wide[f"{ticker}_Volume"].pct_change(
+            periods=periods,
+            fill_method=None,
+        )
+
     factors = pd.DataFrame(index=wide.index)
-    factors["factor_rel_mom_aapl_qqq_5d"] = ret_5d["AAPL"] - ret_5d["QQQ"]
-    factors["factor_rel_mom_aapl_peers_5d"] = ret_5d["AAPL"] - peer_ret_5d
-    factors["factor_peer_confirmation_5d"] = peer_ret_5d
-    factors["factor_peer_disagreement_5d"] = (
-        ret_5d["MSFT"] - ret_5d["NVDA"]
-    ).abs()
 
-    vol_10d = ret_1d.rolling(10, min_periods=10).std(ddof=1)
-    factors["factor_rel_vol_aapl_qqq_10d"] = vol_10d["AAPL"].div(
-        vol_10d["QQQ"] + eps
-    )
+    # FCT-01
+    msft_ret_3d = price_return("MSFT", 3)
+    nvda_ret_3d = price_return("NVDA", 3)
 
-    aapl_volume_ratio_20d = volume["AAPL"].div(
-        volume["AAPL"].rolling(20, min_periods=20).mean()
-    ).sub(1.0)
-    factors["factor_volume_confirmed_mom_5d_20d"] = (
-        ret_5d["AAPL"] * aapl_volume_ratio_20d
-    )
-    factors["factor_market_aligned_mom_5d_20d"] = (
-        ret_5d["AAPL"] * ret_20d["QQQ"]
+    factors["peer_signed_return_confirmation"] = (
+        msft_ret_3d + nvda_ret_3d
+    ).rolling(5, min_periods=5).mean()
+
+    # FCT-02
+    factors["peer_return_dispersion"] = (
+        (msft_ret_3d - nvda_ret_3d)
+        .abs()
+        .rolling(5, min_periods=5)
+        .mean()
     )
 
-    daily_pressure = (wide["AAPL_Close"] - wide["AAPL_Open"]).div(
-        wide["AAPL_High"] - wide["AAPL_Low"] + eps
+    # FCT-03
+    aapl_ret_5d = price_return("AAPL", 5)
+    msft_ret_5d = price_return("MSFT", 5)
+    nvda_ret_5d = price_return("NVDA", 5)
+
+    factors["aapl_peer_consensus_relative_return"] = (
+        aapl_ret_5d - ((msft_ret_5d + nvda_ret_5d) / 2.0)
     )
-    factors["factor_close_pressure_5d"] = daily_pressure.rolling(
+
+    # FCT-04
+    aapl_risk_10d = (
+        price_return("AAPL", 2)
+        .rolling(10, min_periods=10)
+        .std(ddof=1)
+    )
+    qqq_risk_10d = (
+        price_return("QQQ", 2)
+        .rolling(10, min_periods=10)
+        .std(ddof=1)
+    )
+
+    factors["aapl_to_qqq_relative_realized_risk"] = (
+        aapl_risk_10d / (qqq_risk_10d + eps)
+    )
+
+    # FCT-05
+    peer_volume_change = (
+        volume_return("MSFT", 3)
+        + volume_return("NVDA", 3)
+    ).rolling(5, min_periods=5).mean()
+
+    factors["peer_volume_confirmed_aapl_return"] = (
+        price_return("AAPL", 3) * peer_volume_change
+    )
+
+    # FCT-06
+    relative_return_5d = (
+        price_return("AAPL", 5)
+        - price_return("QQQ", 5)
+    )
+
+    factors["relative_return_market_risk_interaction"] = (
+        relative_return_5d * qqq_risk_10d
+    )
+
+    # FCT-07
+    aapl_normalized_range = (
+        (wide["AAPL_High"] - wide["AAPL_Low"])
+        / (wide["AAPL_Close"] + eps)
+    )
+    qqq_normalized_range = (
+        (wide["QQQ_High"] - wide["QQQ_Low"])
+        / (wide["QQQ_Close"] + eps)
+    )
+
+    aapl_range_5d = aapl_normalized_range.rolling(
+        5, min_periods=5
+    ).mean()
+    qqq_range_5d = qqq_normalized_range.rolling(
         5, min_periods=5
     ).mean()
 
-    return factors
+    factors["aapl_to_qqq_normalized_range_ratio"] = (
+        aapl_range_5d / (qqq_range_5d + eps)
+    )
 
+    # FCT-08
+    factors["lagged_qqq_relative_momentum"] = (
+        price_return("AAPL", 3)
+        - price_return("QQQ", 3).shift(2)
+    )
+    return factors
 
 def build_factor_table(five_year_path: Path, split_2025_path: Path,
                        output_path: Path | None = None) -> pd.DataFrame:
