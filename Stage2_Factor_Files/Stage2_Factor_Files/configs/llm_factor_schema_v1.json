@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Stage 2 LLM Factor Output",
+  "type": "object",
+  "required": ["prompt_version", "candidates"],
+  "properties": {
+    "prompt_version": {
+      "type": "string",
+      "const": "v1"
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "factor_id",
+          "name",
+          "family",
+          "hypothesis",
+          "formula",
+          "inputs",
+          "lookback_days",
+          "expected_direction",
+          "leakage_self_check",
+          "implementation_note",
+          "difference_from_baseline"
+        ],
+        "properties": {
+          "factor_id": { "type": "string", "pattern": "^[A-Z]+-[0-9]{2}$" },
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "family": {
+            "type": "string",
+            "enum": [
+              "relative",
+              "confirmation",
+              "dispersion",
+              "risk",
+              "composite",
+              "regime"
+            ]
+          },
+          "hypothesis": { "type": "string", "minLength": 10 },
+          "formula": { "type": "string", "minLength": 3 },
+          "inputs": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" }
+          },
+          "lookback_days": {
+            "type": "integer",
+            "enum": [2, 3, 5, 10, 20]
+          },
+          "expected_direction": {
+            "type": "string",
+            "enum": ["positive", "negative", "conditional", "unknown"]
+          },
+          "leakage_self_check": { "type": "string", "minLength": 10 },
+          "implementation_note": { "type": "string", "minLength": 5 },
+          "difference_from_baseline": { "type": "string", "minLength": 10 }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
