@@ -1,0 +1,31 @@
+test_all_long_equals_buy_hold_all_flat_stays_one (test_backtesting.BacktestingTests.test_all_long_equals_buy_hold_all_flat_stays_one) ... ok
+test_hand_computed_positions_compounding_drawdown_and_sharpe (test_backtesting.BacktestingTests.test_hand_computed_positions_compounding_drawdown_and_sharpe) ... ok
+test_initial_loss_and_zero_volatility (test_backtesting.BacktestingTests.test_initial_loss_and_zero_volatility) ... ok
+test_input_order_and_nonmutation (test_backtesting.BacktestingTests.test_input_order_and_nonmutation) ... ok
+test_invalid_returns (test_backtesting.BacktestingTests.test_invalid_returns) ... ok
+test_missing_duplicate_invalid_prices_rejected (test_backtesting.BacktestingTests.test_missing_duplicate_invalid_prices_rejected) ... ok
+test_real_prices_independent_end_to_end (test_backtesting.BacktestingTests.test_real_prices_independent_end_to_end) ... ok
+test_validation_multiple_runs_missing_dates_and_wrong_labels_rejected (test_backtesting.BacktestingTests.test_validation_multiple_runs_missing_dates_and_wrong_labels_rejected) ... /Users/bastobsmacm2pro/Documents/SemanticMLPFinance/.venv-stage1/lib/python3.11/site-packages/sklearn/metrics/_classification.py:2939: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+ok
+test_auc_uses_scores_and_counts_ties (test_evaluation.EvaluationTests.test_auc_uses_scores_and_counts_ties) ... ok
+test_bad_metric_inputs_rejected (test_evaluation.EvaluationTests.test_bad_metric_inputs_rejected) ... ok
+test_hand_calculated_confusion_and_rank_auc (test_evaluation.EvaluationTests.test_hand_calculated_confusion_and_rank_auc) ... ok
+test_incomplete_duplicate_seeds_rejected (test_evaluation.EvaluationTests.test_incomplete_duplicate_seeds_rejected) ... ok
+test_independent_real_confusion_and_pairwise_auc (test_evaluation.EvaluationTests.test_independent_real_confusion_and_pairwise_auc) ... ok
+test_real_saved_metrics_match_committed_results (test_evaluation.EvaluationTests.test_real_saved_metrics_match_committed_results) ... ok
+test_rf_sample_sd_and_all_comparisons (test_evaluation.EvaluationTests.test_rf_sample_sd_and_all_comparisons) ... ok
+test_saved_csv_roundtrip_and_no_mutation (test_evaluation.EvaluationTests.test_saved_csv_roundtrip_and_no_mutation) ... ok
+test_schema_date_and_alignment_errors_rejected (test_evaluation.EvaluationTests.test_schema_date_and_alignment_errors_rejected) ... ok
+test_selection_ignores_test_scores_and_fixes_seed (test_evaluation.EvaluationTests.test_selection_ignores_test_scores_and_fixes_seed) ... ok
+test_undefined_auc_is_explicit (test_evaluation.EvaluationTests.test_undefined_auc_is_explicit) ... /Users/bastobsmacm2pro/Documents/SemanticMLPFinance/.venv-stage1/lib/python3.11/site-packages/sklearn/metrics/_classification.py:614: UserWarning: A single label was found in 'y_true' and 'y_pred'. For the confusion matrix to have the correct shape, use the 'labels' parameter to pass all known labels.
+  warnings.warn(
+ok
+test_ablation_columns_are_isolated (test_stage1_training.Stage1TrainingTests.test_ablation_columns_are_isolated) ... ok
+test_period_boundaries_do_not_cross (test_stage1_training.Stage1TrainingTests.test_period_boundaries_do_not_cross) ... ok
+test_target_matches_next_aapl_trading_day (test_stage1_training.Stage1TrainingTests.test_target_matches_next_aapl_trading_day) ... ok
+
+----------------------------------------------------------------------
+Ran 22 tests in 2.794s
+
+OK
