@@ -9,31 +9,19 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.data import quarterly_split
+from src.evaluation import calculate_classification_metrics
 from src.features import FEATURE_SETS, build_stage1_features
 from src.models import fit_logistic_regression, fit_random_forest
 
 LR_SEED = 42
 RF_SEEDS = (0, 1, 2)
 TARGET = "target_next_day_up"
-
-
-def provisional_metrics(y_true, predicted, probability):
-    """Temporary report only; replace with Abu's shared evaluator after merge."""
-    return {
-        "accuracy": accuracy_score(y_true, predicted),
-        "balanced_accuracy": balanced_accuracy_score(y_true, predicted),
-        "auc": roc_auc_score(y_true, probability),
-        "precision": precision_score(y_true, predicted, zero_division=0),
-        "recall": recall_score(y_true, predicted, zero_division=0),
-        "f1": f1_score(y_true, predicted, zero_division=0),
-    }
 
 
 def prediction_frame(frame, split, experiment, model, seed, predicted, probability):
@@ -67,13 +55,13 @@ def run(data_path: Path, output_dir: Path, year: int = 2025):
         majority_pred = np.full(len(frame), majority_class)
         majority_prob = np.full(len(frame), majority_probability)
         rows.append({"split": split_name, "experiment": "baseline", "model": "majority_class", "seed": np.nan,
-                     **provisional_metrics(actual, majority_pred, majority_prob)})
+                     **calculate_classification_metrics(actual, majority_pred, majority_prob)})
         predictions.append(prediction_frame(frame, split_name, "baseline", "majority_class", np.nan, majority_pred, majority_prob))
 
         previous_pred = frame["previous_direction"].to_numpy()
         previous_prob = previous_pred.astype(float)
         rows.append({"split": split_name, "experiment": "baseline", "model": "previous_direction", "seed": np.nan,
-                     **provisional_metrics(actual, previous_pred, previous_prob)})
+                     **calculate_classification_metrics(actual, previous_pred, previous_prob)})
         predictions.append(prediction_frame(frame, split_name, "baseline", "previous_direction", np.nan, previous_pred, previous_prob))
 
     for experiment, columns in FEATURE_SETS.items():
@@ -89,14 +77,14 @@ def run(data_path: Path, output_dir: Path, year: int = 2025):
             probability = logistic.predict_proba(x_evaluate)[:, 1]
             predicted = (probability >= 0.5).astype(int)
             rows.append({"split": split_name, "experiment": experiment, "model": "logistic_regression", "seed": LR_SEED,
-                         **provisional_metrics(actual, predicted, probability)})
+                         **calculate_classification_metrics(actual, predicted, probability)})
             predictions.append(prediction_frame(frame, split_name, experiment, "logistic_regression", LR_SEED, predicted, probability))
 
             for seed, forest in forests:
                 probability = forest.predict_proba(x_evaluate)[:, 1]
                 predicted = (probability >= 0.5).astype(int)
                 rows.append({"split": split_name, "experiment": experiment, "model": "random_forest", "seed": seed,
-                             **provisional_metrics(actual, predicted, probability)})
+                             **calculate_classification_metrics(actual, predicted, probability)})
                 predictions.append(prediction_frame(frame, split_name, experiment, "random_forest", seed, predicted, probability))
 
     detailed = pd.DataFrame(rows)

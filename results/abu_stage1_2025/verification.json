@@ -1,0 +1,17 @@
+{
+  "base_commit": "8b6574167a048a72a88791412e8c7193d6d8a737",
+  "python": "3.11.4",
+  "scikit_learn": "1.9.1",
+  "data_sha256": "5972891e0f4859bccc5dfc31f600dbca026e7f25c52785f02e6846e3db7a07a7",
+  "original_test_count": 3,
+  "final_test_count": 22,
+  "prediction_rows": 1764,
+  "per_run_rows": 28,
+  "comparison_rows": 16,
+  "numerical_tolerance": 1e-14,
+  "fresh_original_vs_final_all_four_csvs_match": true,
+  "fresh_metrics_independently_verified": true,
+  "legacy_171_metrics_match_committed": true,
+  "backtest_independently_verified": true,
+  "protected_paths_unchanged": true
+}

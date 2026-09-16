@@ -1,0 +1,16 @@
+{
+  "experiment": "B",
+  "model": "logistic_regression",
+  "seed": 42,
+  "selection_split": "validation",
+  "selection_metric": "balanced_accuracy_mean",
+  "selection_score": 0.5757575757575758,
+  "start_date": "2025-10-01",
+  "end_date": "2025-12-31",
+  "n_intervals": 63,
+  "long_intervals": 8,
+  "periods_per_year": 252,
+  "risk_free_rate": 0,
+  "transaction_cost": 0,
+  "execution": "Idealized same-close to next-close; close-based features; optimistic execution assumption"
+}
