@@ -1,0 +1,16 @@
+{
+  "year": 2025,
+  "logistic_regression_seed": 42,
+  "random_forest_seeds": [
+    0,
+    1,
+    2
+  ],
+  "threshold": 0.5,
+  "split_rows": {
+    "train": 121,
+    "validation": 63,
+    "test": 63
+  },
+  "note": "Metrics are provisional until passed through Abu's shared evaluation module."
+}
