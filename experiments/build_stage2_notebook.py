@@ -205,7 +205,7 @@ axes[1].yaxis.set_major_locator(MaxNLocator(integer=True))
 plt.tight_layout(); plt.show()
 
 summary = pd.DataFrame({
-    name: {'factors tried': len(b), 'invalid formulas': int(b.status.eq('invalid').sum()),
+    name: {'factors tried': len(b), 'skipped (broken or repeated)': int(b.status.eq('invalid').sum()),
            'average AUC gain': round(b.loc[b.status != 'invalid', 'auc_gain'].mean(), 4),
            'helped 3+ of 4 years': int((b.years_helped >= 3).sum()),
            'kept': int(b.status.eq('kept').sum())}
@@ -215,7 +215,7 @@ summary"""))
 cells.append(md("""**Reading this output**
 
 * **Claude learns from the feedback.** Its average score went from negative in rounds 1-2 to positive in rounds 3-5. After it found the NVIDIA-vs-Apple range factor in round 4, it spent the next rounds trying versions of the same idea. One version helped in all 4 years but was just under the 0.01 line.
-* **Claude's factors were a bit better on average** (-0.0006 vs -0.0020), and all of Claude's formulas worked, while 9 of the random ones broke.
+* **Claude's factors were a bit better on average** (-0.0006 vs -0.0020), and every one of Claude's 48 formulas was new and usable, while 9 of the random ones were repeats of earlier formulas and had to be skipped.
 * **Both runs kept 1 factor.** The random run got lucky once, which fits the fake-factor test from Step 7.
 * So on Q3 alone, Claude is only slightly ahead. The real comparison is the final test in Step 10."""))
 
