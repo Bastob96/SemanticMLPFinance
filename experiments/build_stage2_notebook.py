@@ -1,9 +1,38 @@
-"""Builds 'Stage 2_Demo.ipynb'. Run: python experiments/build_stage2_notebook.py"""
+"""Builds 'Stage 2_Demo.ipynb'. Run: python experiments/build_stage2_notebook.py
+
+All the Stage 2 code is written into the notebook cells (like the Stage 1 demo).
+The code cells are taken from src/stage2/*.py when the notebook is built, so the
+notebook and the Terminal command always run exactly the same code.
+"""
+
+import ast
+from pathlib import Path
 
 import nbformat as nbf
 
+ROOT = Path(__file__).resolve().parents[1]
 md, code = nbf.v4.new_markdown_cell, nbf.v4.new_code_cell
 cells = []
+
+
+def module_cell(path, title):
+    """The code of one src/stage2 file as a notebook cell: the file's description becomes
+    comments, and imports between the Stage 2 files are dropped (those names are already
+    defined in earlier cells)."""
+    text = (ROOT / path).read_text()
+    tree = ast.parse(text)
+    lines = text.splitlines()
+    doc = ast.get_docstring(tree)
+    start = tree.body[0].end_lineno if doc else 0
+    body = [l for l in lines[start:]
+            if not l.startswith("from __future__") and not l.startswith("from .")]
+    while body and not body[0].strip():
+        body.pop(0)
+    header = [f"# {title}  (also saved as {path})"]
+    if doc:
+        header += ["#"] + [("# " + l).rstrip() for l in doc.splitlines()]
+    return code("\n".join(header + [""] + body).rstrip())
+
 
 cells.append(md("""# Stage 2: Letting an LLM Find New Factors
 
@@ -15,21 +44,27 @@ In Stage 1 I built 22 factors by hand and found that none of the models could pr
 
 Dr Liu's question for Stage 2 is: **can an LLM come up with factors on its own that do better than ours?**
 
-To test this I built a loop that runs by itself. Claude suggests new factors, my code tests them, and the results go back to Claude so it can try again. This notebook walks through one run of 8 rounds."""))
+To test this I built a loop that runs by itself. Claude suggests new factors, my code tests them, and the results go back to Claude so it can try again. All the code is in this notebook, step by step, like in Stage 1."""))
 
-cells.append(code("""# Section 1: Load the two runs (Claude and random)
-import sys, json, warnings
+cells.append(code("""# Section 1: Setup, the data, and the two saved runs
+import sys, json, re, time, random, warnings
 from pathlib import Path
+from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-sys.path.insert(0, '.')
+sys.path.insert(0, '.')                 # to use my Stage 1 code in src/ (features, split, models, backtest)
 warnings.filterwarnings('ignore')
 pd.set_option('display.max_colwidth', 120)
 
+from src.features import build_stage1_features
+
+raw = pd.read_csv('data/processed/aligned_daily_ohlcv_5y.csv')   # same data as Stage 1
+features = build_stage1_features(raw)                              # my 22 Stage 1 factors + the target
+
 RUNS = sorted(Path('results/stage2/runs').glob('*'))
-LLM_RUN = [r for r in RUNS if r.name.endswith('_claude')][-1]      # latest Claude run
-RANDOM_RUN = [r for r in RUNS if r.name.endswith('_random')][-1]   # latest random-formula run
+LLM_RUN = [r for r in RUNS if r.name.endswith('_claude')][-1]      # the Claude run
+RANDOM_RUN = [r for r in RUNS if r.name.endswith('_random')][-1]   # the random-formula run
 
 def load(run):
     board = pd.read_csv(run / 'scoreboard.csv').fillna({'reason': '', 'parent': '', 'closest': ''})
@@ -46,60 +81,15 @@ cells.append(md("""## Step 2: How the Loop Works
 
 Every round goes through the same five steps:
 
-1. **Claude suggests 6 factors.** 3 are improvements on something that already worked, and 3 are completely new ideas.
-2. **My code builds each factor** from the formula Claude wrote, using only past prices.
-3. **I test each one.** I add it to the 22 Stage 1 factors, retrain the models, and check if the score on Q3 goes up, for each year from 2022 to 2025.
-4. **I keep it or throw it away.** It has to help in at least 3 of the 4 years, and by more than random luck would.
-5. **The results go back to Claude** in the next round, including what failed and why.
+1. **Claude suggests 6 factors.** 3 are improvements on something that already worked, and 3 are completely new ideas. *(code in Step 5)*
+2. **My code builds each factor** from the formula Claude wrote, using only past prices. *(code in Step 3)*
+3. **I test each one.** I add it to the 22 Stage 1 factors, retrain the models, and check if the score on Q3 goes up, for each year from 2022 to 2025. *(code in Step 6)*
+4. **I keep it or throw it away.** It has to help in at least 3 of the 4 years, and by more than random luck would. *(code in Step 6)*
+5. **The results go back to Claude** in the next round, including what failed and why. *(code in Steps 5 and 6)*
 
 Nobody picks the factors by hand, and Q4 is never used during the loop. It is saved for the final test in Step 10.
 
-The code below is the loop itself. I ran it once from Terminal (`python experiments/run_stage2_loop.py --rounds 8`), because talking to Claude costs money and takes a few minutes. Everything Claude sent back was saved, so in this notebook I reuse those saved answers instead of asking Claude again. In Step 6 I re-run one full round with them."""))
-
-cells.append(code("""# Section 2: The loop, written out (the same steps as src/stage2/loop.py)
-from src.stage2.llm import SYSTEM, TOOL
-from src.stage2.formula import evaluate, FormulaError
-
-def ask_claude(prompt):
-    \"\"\"1. Send the instructions to Claude and get back its reflection and 6 factors.\"\"\"
-    import anthropic
-    client = anthropic.Anthropic(default_headers={'Accept-Encoding': 'gzip, deflate'})
-    reply = client.messages.create(model='claude-sonnet-5-5', max_tokens=8000, system=SYSTEM,
-                                   tools=[TOOL], tool_choice={'type': 'auto'},
-                                   messages=[{'role': 'user', 'content': prompt}])
-    answer = next(block for block in reply.content if block.type == 'tool_use')
-    return answer.input            # {'reflection': '...', 'factors': [6 factors]}
-
-def keep_or_reject(years_helped, average_gain, similarity):
-    \"\"\"4. The keep rule.\"\"\"
-    reasons = []
-    if years_helped < 3:
-        reasons.append(f'helped only {years_helped}/4 years')
-    if average_gain < 0.01:
-        reasons.append('gain below 0.01')
-    if similarity >= 0.9:
-        reasons.append('copy of a factor I already have')
-    return ('kept', '') if not reasons else ('rejected', '; '.join(reasons))
-
-def one_round(prompt, ask=ask_claude):
-    \"\"\"One round of the loop. The table it returns goes back to Claude in the next prompt (step 5).\"\"\"
-    reply = ask(prompt)                                          # 1. Claude suggests 6 factors
-    rows = []
-    for factor in reply['factors']:
-        try:
-            values = evaluate(factor['formula'], prices)         # 2. build it from the formula
-        except FormulaError as problem:
-            rows.append({'name': factor['name'], 'status': 'refused', 'reason': str(problem)})
-            continue
-        gains = test_factor(factor['name'], values)              # 3. test it on 2022-2025
-        similarity, closest = most_similar(values)
-        years_helped = sum(gain > 0 for gain in gains.values())
-        average_gain = sum(gains.values()) / len(gains)
-        status, reason = keep_or_reject(years_helped, average_gain, similarity)   # 4. keep or reject
-        rows.append({'name': factor['name'], **{str(y): round(float(g), 3) for y, g in gains.items()},
-                     'average_gain': round(float(average_gain), 4), 'years_helped': f'{years_helped}/4',
-                     'similarity': round(float(similarity), 2), 'status': status, 'reason': reason})
-    return pd.DataFrame(rows)"""))
+Talking to Claude costs a little money and takes a few minutes, so I ran the 8 rounds once and saved everything Claude sent back. This notebook uses those saved answers. In Step 6 I re-run a full round with the code, and Step 11 has the switch to run the whole loop again live."""))
 
 cells.append(md("""## Step 3: Turning Claude's Formula into Numbers
 
@@ -109,20 +99,18 @@ Claude writes each factor as a formula. For example:
 
 means "Apple's 5-day return minus the market's 5-day return".
 
-My code reads the formula, checks it only uses allowed data, and calculates it for every day.
+The code below reads the formula, checks it only uses allowed data and operations, and calculates it for every day. Every operation only looks backwards in time."""))
 
-Before trusting it, I checked two things:
+cells.append(module_cell("src/stage2/formula.py", "Section 3a: The formula language"))
+
+cells.append(module_cell("src/stage2/context.py", "Section 3b: My 22 Stage 1 factors as formulas, and the market summary for Claude"))
+
+cells.append(md("""Before trusting it, I checked two things:
 * If I write my 22 Stage 1 factors as formulas, I get exactly the same numbers as in Stage 1.
 * If I delete all the data after a certain day, that day's value doesn't change. So no factor can secretly use future prices."""))
 
-cells.append(code("""# Section 3: Check that the formula code works properly
-from src.features import build_stage1_features
-from src.stage2.context import BASE_FORMULAS
-from src.stage2.formula import evaluate, validate, wide_prices, FormulaError
-
-raw = pd.read_csv('data/processed/aligned_daily_ohlcv_5y.csv')
+cells.append(code("""# Section 3c: Check that the formula code works properly
 prices = wide_prices(raw)
-features = build_stage1_features(raw)
 stage1 = features.set_index(pd.to_datetime(features['Date']))
 
 # Check 1: rebuild my 22 Stage 1 factors from formulas
@@ -149,21 +137,27 @@ Each round Claude gets the same instructions, plus everything it has tried so fa
 * What we are predicting, and which data it can use
 * How each factor will be tested and the rule for keeping it
 * My 22 existing factors, so it doesn't repeat them
-* A short summary of each stock's yearly returns, only up to June 2025 so it learns nothing about the test periods"""))
+* A short summary of each stock's yearly returns, only up to June 2025 so it learns nothing about the test periods
+
+The instructions are written by `build_prompt` (Step 5). Below is what Claude actually received in round 8."""))
 
 cells.append(code("""# Section 4: The instructions Claude got in the last round (beginning, then the results part)
 last = llm_board['round'].max()
 prompt = (LLM_RUN / f'round_{last:02d}_prompt.txt').read_text()
 print(prompt[:1400])
 print('\\n.........\\n')
-start = prompt.index('SCOREBOARD OF EVERYTHING TRIED SO FAR')  # where the past results start
+start = prompt.index('SCOREBOARD OF EVERYTHING TRIED SO FAR')   # where the past results start
 print(prompt[start:start + 1600])"""))
 
-cells.append(md("""## Step 5: What Claude Suggested
+cells.append(md("""## Step 5: Asking Claude
 
-Before suggesting new factors, Claude writes a few lines about what it learned from the last round. These are its own words, unedited."""))
+The code below writes the instructions (`build_prompt`) and sends them to Claude (`ClaudeProposer`). Claude answers with a short reflection on the results so far and 6 factors. `RandomProposer` is the version that makes random formulas instead, used in Step 8."""))
 
-cells.append(code("""# Section 5: What Claude wrote each round, then its first 6 factors
+cells.append(module_cell("src/stage2/llm.py", "Section 5a: Writing the instructions and asking Claude"))
+
+cells.append(md("""Before suggesting new factors, Claude writes a few lines about what it learned from the last round. These are its own words, unedited."""))
+
+cells.append(code("""# Section 5b: What Claude wrote each round, then its first 6 factors
 for r in sorted(llm_board['round'].unique()):
     resp = json.loads((LLM_RUN / f'round_{r:02d}_response.json').read_text())
     print(f'Round {r}: {resp.get(\"reflection\", \"\")}\\n')
@@ -171,69 +165,46 @@ for r in sorted(llm_board['round'].unique()):
 first = llm_board[llm_board['round'] == 1][['name', 'mode', 'formula', 'hypothesis']]
 first"""))
 
-cells.append(md("""## Step 6: How Every Factor Scored
+cells.append(md("""## Step 6: Testing Each Factor and the Keep Rule
 
-For every factor, in every year: train on Q1-Q2 with the 22 factors plus the new one, and score on Q3. Then compare with the 22 factors alone.
+**Testing (Section 6a).** For every factor, in every year: train on Q1-Q2 with the 22 factors plus the new one, and score on Q3. Then compare with the 22 factors alone. Same models and seeds as Stage 1 (Logistic Regression seed 42, Random Forest seeds 0, 1, 2).
+
+**The loop (Section 6b).** Builds each factor, tests it, applies the keep rule, and writes the scoreboard that goes back to Claude. A factor is kept only if:
+* it helped in at least **3 of 4 years**
+* the average gain is at least **0.01**
+* it is not a copy of a factor I already have (similarity below **0.9**)"""))
+
+cells.append(module_cell("src/stage2/scoring.py", "Section 6a: Testing a factor on Q3 of 2022-2025"))
+
+cells.append(module_cell("src/stage2/loop.py", "Section 6b: The loop and the keep rule"))
+
+cells.append(code("""# Section 6c: Re-run round 4 with the code above, using the answer Claude gave in that round
+import tempfile
+
+saved_answer = json.loads((LLM_RUN / 'round_04_response.json').read_text())
+replay = Loop(proposer=lambda prompt: saved_answer,              # Claude's saved reply instead of a new API call
+              raw=raw, features=features, prices=prices,
+              out_dir=Path(tempfile.mkdtemp()),
+              stage1_importance_path=Path('results/multi_year/permutation_importance_summary.csv'))
+replay.board = llm_board[llm_board['round'] < 4].to_dict('records')   # what had happened in rounds 1-3
+replay.run_round(4)
+
+round_4 = pd.DataFrame(replay.board[-6:])[['name', 'auc_gain', 'years_helped', 'importance', 'max_corr', 'status', 'reason']]
+round_4.round(4)"""))
+
+cells.append(md("""**Reading this output**
+
+* This is round 4 run again with the code above, using Claude's saved answer.
+* `nvda_range_vs_aapl_range` helped in 3 of 4 years by about 0.012 on average, so it is **kept**. The other 5 are rejected, each with its reason.
+* All 6 factors get the same keep or reject decision as in the real run (next table). The numbers can differ slightly, because the run was done on a different computer with a slightly different version of scikit-learn."""))
+
+cells.append(md("""**The full scoreboard of the real run** (all 8 rounds):
 
 * **auc_gain**: how much the score went up (positive) or down (negative), averaged over the 4 years and both models
 * **years**: in how many of the 4 years it helped
 * **max_corr**: how similar it is to a factor I already have (0.9 or more means it is basically a copy)"""))
 
-cells.append(code("""# Section 6a: How one factor is tested (step 3 of the loop)
-from sklearn.metrics import roc_auc_score
-from src.data import quarterly_split
-from src.features import FEATURE_SETS
-from src.models import fit_logistic_regression, fit_random_forest
-
-BASE = FEATURE_SETS['C']                     # my 22 Stage 1 factors
-TARGET = 'target_next_day_up'
-YEARS = [2022, 2023, 2024, 2025]
-features['Date'] = pd.to_datetime(features['Date'])
-
-def q3_auc(train, val, columns):
-    \"\"\"Train on Q1-Q2, score on Q3. Average AUC of Logistic Regression (seed 42) and Random Forest (seeds 0, 1, 2).\"\"\"
-    models = [fit_logistic_regression(train[columns], train[TARGET], 42)]
-    models += [fit_random_forest(train[columns], train[TARGET], seed) for seed in (0, 1, 2)]
-    return np.mean([roc_auc_score(val[TARGET], m.predict_proba(val[columns])[:, 1]) for m in models])
-
-base_auc = {year: q3_auc(quarterly_split(features, year)['train'], quarterly_split(features, year)['validation'], BASE)
-            for year in YEARS}       # the 22 factors alone, worked out once per year
-
-def test_factor(name, values):
-    \"\"\"How much the Q3 score goes up in each year when this factor is added to the 22.\"\"\"
-    data = features.merge(values.rename(name), left_on='Date', right_index=True, how='left')
-    gains = {}
-    for year in YEARS:
-        split = quarterly_split(data, year)
-        train, val = split['train'].copy(), split['validation'].copy()
-        low, high = train[name].quantile([0.01, 0.99])          # trim extreme values, using training data only
-        train[name], val[name] = train[name].clip(low, high), val[name].clip(low, high)
-        gains[year] = q3_auc(train, val, BASE + [name]) - base_auc[year]
-    return gains
-
-check_days = features['Date'][(features['Date'].dt.year >= 2022) & (features['Date'].dt.month <= 9)]
-def most_similar(values):
-    \"\"\"How similar the new factor is to the closest of my 22 factors (Q1-Q3 days only, never Q4).\"\"\"
-    existing = stage1.loc[check_days, BASE]
-    similarity = existing.corrwith(values.reindex(existing.index), method='spearman').abs()
-    return similarity.max(), similarity.idxmax()
-
-print('Q3 score of the 22 factors alone:', {year: round(float(auc), 3) for year, auc in base_auc.items()})"""))
-
-cells.append(code("""# Section 6b: Re-run round 4 with the answer Claude gave in that round
-saved_answer = json.loads((LLM_RUN / 'round_04_response.json').read_text())
-prompt = (LLM_RUN / 'round_04_prompt.txt').read_text()
-
-round_4 = one_round(prompt, ask=lambda prompt: saved_answer)   # same loop code, Claude's saved reply instead of a new call
-round_4"""))
-
-cells.append(md("""**Reading this output**
-
-* This is round 4 run again with the code above, using Claude's saved answer. The years show how much the Q3 score went up (+) or down (-) when the factor was added.
-* `nvda_range_vs_aapl_range` helped in 2023, 2024 and 2025 by about 0.012 on average, so it is **kept**. The other 5 are rejected, each with its reason.
-* All 6 factors get the same keep or reject decision as in the real run (next table). The numbers can differ slightly, because the run was done on a different computer with a slightly different version of scikit-learn."""))
-
-cells.append(code("""# Section 6c: Every factor Claude suggested and how it scored
+cells.append(code("""# Section 6d: Every factor Claude suggested and how it scored
 show = llm_board.assign(years=llm_board.years_helped.astype(str) + '/4')[
     ['round', 'name', 'mode', 'auc_gain', 'years', 'max_corr', 'status', 'reason']]
 print(llm_board.status.value_counts().to_string(), '\\n')
@@ -253,10 +224,26 @@ To see how much luck can do, I tested **32 fake factors made of random numbers**
 * If the rule was only "helps in 3 of 4 years", **6 of the 32** fake factors would pass.
 * Also needing the average gain to be at least 0.01, only **1 of 32** passes.
 
-So anything I keep has to beat what random numbers can do."""))
+So anything I keep has to beat what random numbers can do. The test takes about 10 minutes, so it is switched off below and the saved result is used."""))
 
-cells.append(code("""# Section 7: Claude's factors vs fake factors made of random numbers
-noise = pd.read_csv('results/stage2/noise_null.csv')
+cells.append(code("""# Section 7a: The fake-factor test
+RUN_FAKE_FACTOR_TEST = False      # True = run it again (about 10 minutes)
+
+def fake_factor_test(n=32):
+    scorer = Scorer(features)
+    dates = pd.to_datetime(features['Date'])
+    rows = []
+    for i in range(n):
+        fake = pd.Series(np.random.default_rng(i).normal(size=len(dates)), index=dates.values)   # pure random numbers
+        rows.append(summarise(scorer.score(f'noise{i}', fake)).reset_index())
+    return pd.concat(rows, ignore_index=True)
+
+noise = fake_factor_test() if RUN_FAKE_FACTOR_TEST else pd.read_csv('results/stage2/noise_null.csv')
+for gain in (0, 0.01):
+    passed = ((noise.years_helped >= 3) & (noise.auc_gain >= gain)).sum()
+    print(f'Fake factors passing \"3 of 4 years and gain at least {gain}\": {passed} of {len(noise)}')"""))
+
+cells.append(code("""# Section 7b: Claude's factors vs fake factors made of random numbers
 scored = llm_board[llm_board.status != 'invalid']
 
 fig, ax = plt.subplots(figsize=(8, 3.2))
@@ -278,16 +265,17 @@ cells.append(md("""**Reading this output**
 
 cells.append(md("""## Step 8: Is Claude Better Than Random Guessing?
 
-To be fair, I ran the exact same loop again, but this time the factors were random formulas instead of Claude's. Same number of rounds, same tests, same keep rule.
+To be fair, I ran the exact same loop again, but this time the factors were random formulas (`RandomProposer`, Step 5) instead of Claude's. Same number of rounds, same tests, same keep rule.
 
 If Claude is actually useful, its factors should score better than the random ones."""))
 
 cells.append(code("""# Section 8: Claude vs random formulas, round by round
+from matplotlib.ticker import MaxNLocator
+
 def per_round(board):
     s = board[board.status != 'invalid']
     g = s.groupby('round').agg(mean_gain=('auc_gain', 'mean'), best_gain=('auc_gain', 'max'))
     g['kept_total'] = board.assign(k=board.status.eq('kept')).groupby('round').k.sum().cumsum()
-    g['invalid'] = board.groupby('round').apply(lambda x: x.status.eq('invalid').sum())
     return g
 
 llm_r, rnd_r = per_round(llm_board), per_round(rnd_board)
@@ -298,7 +286,6 @@ for g, name, col in [(llm_r, 'Claude', '#2f6db5'), (rnd_r, 'Random', '#e08a2b')]
 axes[0].axhline(0, color='#999', lw=0.8)
 axes[0].set_title('Average AUC gain of the round\\'s factors'); axes[0].set_xlabel('Round')
 axes[1].set_title('Factors kept so far'); axes[1].set_xlabel('Round')
-from matplotlib.ticker import MaxNLocator
 for ax in axes:
     ax.spines[['top', 'right']].set_visible(False); ax.legend(frameon=False)
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -346,11 +333,11 @@ This is the first and only time Q4 is used. For each year I train on Q1-Q2 twice
 * with my 22 Stage 1 factors
 * with the 22 factors plus the kept factor
 
-Then I predict Q4 and run the same backtest as Stage 1 (hold Apple only on days the model says "up"). I do the same for the random run's factor so the comparison is fair."""))
+Then I predict Q4 and run my Stage 1 backtest (hold Apple only on days the model says "up"). I do the same for the random run's factor so the comparison is fair."""))
 
-cells.append(code("""# Section 10: Final test on Q4 (used only here)
-from src.stage2.final_test import run_final_test
+cells.append(module_cell("src/stage2/final_test.py", "Section 10a: The final test"))
 
+cells.append(code("""# Section 10b: Run the final test for Claude's factor and the random run's factor
 results = []
 for name, kept in [('Claude', llm_kept), ('Random', rnd_kept)]:
     if kept:
@@ -376,7 +363,7 @@ cells.append(md("""**Reading this output**
 * **Backtest:** with Claude's factor, Logistic Regression made more money than the Stage 1 model in every year, and beat simply holding Apple in 2023 (+13.8% vs +11.0%).
 * **To be careful:** this is one factor from one run, and each test quarter is only 63 days. 2025 is still below 0.5."""))
 
-cells.append(code("""# Section 10b: Test score with and without the new factor
+cells.append(code("""# Section 10c: Test score with and without the new factor
 if len(final):
     fig, axes = plt.subplots(1, 2, figsize=(11, 3.4), sharey=True)
     for ax, model in zip(axes, ['logistic_regression', 'random_forest']):
@@ -390,6 +377,36 @@ if len(final):
         ax.spines[['top', 'right']].set_visible(False)
     axes[0].set_ylabel('Test balanced accuracy'); axes[0].legend(frameon=False, fontsize=8)
     plt.tight_layout(); plt.show()"""))
+
+cells.append(md("""## Step 11: Running the Whole Loop Live
+
+This cell runs all the rounds with Claude, using the code above. It is switched off so the notebook doesn't call Claude every time it is opened. To run it: set `RUN_LIVE = True`, and set your API key first (`export ANTHROPIC_API_KEY=...` in Terminal before starting Jupyter). 8 rounds take about 6 minutes and cost well under US$1. Every prompt and reply is saved in a new folder in `results/stage2/runs/`.
+
+The same loop can also be started from Terminal with `python experiments/run_stage2_loop.py --rounds 8`."""))
+
+cells.append(code("""# Section 11: Run the loop live
+RUN_LIVE = False                   # True = ask Claude for real (needs ANTHROPIC_API_KEY)
+ROUNDS = 8
+USE_CLAUDE = True                  # False = random formulas instead of Claude
+
+def run_loop(rounds=ROUNDS, use_claude=USE_CLAUDE):
+    name = 'claude' if use_claude else 'random'
+    out = Path('results/stage2/runs') / f'{time.strftime(\"%Y%m%d_%H%M\")}_{name}'
+    proposer = ClaudeProposer('claude-sonnet-5-5') if use_claude else RandomProposer(0)
+    loop = Loop(proposer=proposer, raw=raw, features=features, prices=prices, out_dir=out,
+                stage1_importance_path=Path('results/multi_year/permutation_importance_summary.csv'))
+    (out / 'config.json').write_text(json.dumps({'rounds': rounds, 'proposer': name, 'model': 'claude-sonnet-5-5',
+                                                 'started': time.strftime('%Y-%m-%dT%H:%M:%S')}, indent=2))
+    for r in range(1, rounds + 1):
+        print(f'Round {r}')
+        loop.run_round(r)
+    print(f'Done. {len(loop.kept)} factor(s) kept. Saved in {out}')
+    return loop
+
+if RUN_LIVE:
+    live = run_loop()
+else:
+    print('RUN_LIVE is False: using the saved run', LLM_RUN.name)"""))
 
 cells.append(md("""## Summary
 
@@ -410,5 +427,5 @@ cells.append(md("""## Summary
 nb = nbf.v4.new_notebook()
 nb.cells = cells
 nb.metadata["kernelspec"] = {"name": "python3", "display_name": "Python 3", "language": "python"}
-nbf.write(nb, "Stage 2_Demo.ipynb")
+nbf.write(nb, ROOT / "Stage 2_Demo.ipynb")
 print("written")
