@@ -1,0 +1,47 @@
+{
+  "reflection": "random proposer (no LLM)",
+  "factors": [
+    {
+      "name": "random_84644",
+      "mode": "variant",
+      "parent": "",
+      "formula": "safe_divide(rolling_std(pct_change(AAPL_Close, 1), 10), rolling_std(pct_change(MSFT_Close, 1), 10))",
+      "hypothesis": "random baseline"
+    },
+    {
+      "name": "random_251045",
+      "mode": "variant",
+      "parent": "",
+      "formula": "subtract(safe_divide(QQQ_Close, rolling_max(QQQ_High, 20)), 1)",
+      "hypothesis": "random baseline"
+    },
+    {
+      "name": "random_917947",
+      "mode": "variant",
+      "parent": "",
+      "formula": "safe_divide(subtract(NVDA_Close, NVDA_Open), subtract(NVDA_High, NVDA_Low))",
+      "hypothesis": "random baseline"
+    },
+    {
+      "name": "random_809695",
+      "mode": "new",
+      "parent": "",
+      "formula": "zscore(AAPL_Volume, 3)",
+      "hypothesis": "random baseline"
+    },
+    {
+      "name": "random_735593",
+      "mode": "new",
+      "parent": "",
+      "formula": "rolling_mean(multiply(sign(pct_change(QQQ_Close, 1)), zscore(QQQ_Volume, 20)), 20)",
+      "hypothesis": "random baseline"
+    },
+    {
+      "name": "random_633316",
+      "mode": "new",
+      "parent": "",
+      "formula": "zscore(AAPL_Volume, 10)",
+      "hypothesis": "random baseline"
+    }
+  ]
+}

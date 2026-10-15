@@ -1,0 +1,53 @@
+{
+  "reflection": "Round 1 showed near-copies of existing factors don't add value, and the volume/gap ideas were noise. MSFT_return_1d and volatility were the most useful existing ones, so I'll try lagged peer returns, cross-stock volatility ratios and longer-horizon regime variables, which are less collinear with the existing set.",
+  "factors": [
+    {
+      "name": "msft_minus_qqq_1d",
+      "mode": "variant",
+      "parent": "MSFT_return_1d",
+      "formula": "subtract(pct_change(MSFT_Close, 1), pct_change(QQQ_Close, 1))",
+      "hypothesis": "MSFT's idiosyncratic move versus the market carries information on large-cap tech rotation that spills over to AAPL next day."
+    },
+    {
+      "name": "aapl_vol10_to_vol60",
+      "mode": "variant",
+      "parent": "AAPL_volatility_10d",
+      "formula": "safe_divide(rolling_std(pct_change(AAPL_Close, 1), 10), rolling_std(pct_change(AAPL_Close, 1), 60))",
+      "hypothesis": "Short-term volatility relative to long-run level flags regime shifts where mean reversion odds change."
+    },
+    {
+      "name": "nvda_cum10_minus_aapl_cum10",
+      "mode": "variant",
+      "parent": "NVDA_cum_return_5d",
+      "formula": "subtract(pct_change(NVDA_Close, 10), pct_change(AAPL_Close, 10))",
+      "hypothesis": "When AAPL lags NVDA over two weeks, it may catch up (or the leader signal fades), a lead-lag spread."
+    },
+    {
+      "name": "aapl_close_to_max_60",
+      "mode": "new",
+      "parent": "",
+      "formula": "subtract(safe_divide(AAPL_Close, rolling_max(AAPL_Close, 60)), 1)",
+      "hypothesis": "Distance from the 60-day high captures drawdown regime, which affects next-day bounce probability."
+    },
+    {
+      "name": "qqq_vol_ratio_aapl",
+      "mode": "new",
+      "parent": "",
+      "formula": "safe_divide(rolling_std(pct_change(AAPL_Close, 1), 10), rolling_std(pct_change(QQQ_Close, 1), 10))",
+      "hypothesis": "AAPL's relative risk versus the market indicates idiosyncratic stress, which tends to mean-revert."
+    },
+    {
+      "name": "aapl_return_lag2",
+      "mode": "new",
+      "parent": "",
+      "formula": "lag(pct_change(AAPL_Close, 1), 1)",
+      "hypothesis": "The previous day's return separately from today's captures short-term reversal or momentum dynamics over two days."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 4374,
+    "output_tokens": 933
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

@@ -1,0 +1,11 @@
+{
+  "rounds": 8,
+  "variants": 3,
+  "new": 3,
+  "proposer": "claude",
+  "model": "claude-sonnet-5-5",
+  "seed": 0,
+  "out": "/Users/bastobsmacm2pro/Documents/SemanticMLPFinance/results/stage2/runs/20261015_1628_claude",
+  "resume": false,
+  "started": "2026-10-15T16:29:00.003834"
+}

@@ -87,27 +87,40 @@ Propose {n_variant} VARIANT factors and {n_new} NEW factors.
   stronger or more stable, e.g. a different window, normalisation, a peer or market comparison. Name the parent.
 - NEW: a genuinely different idea from everything above (a different family, e.g. intraday position,
   gaps, volume-price agreement, cross-stock lead-lag, regime or volatility interaction). Parent is empty.
-Do not resubmit any formula on the scoreboard. Call the tool propose_factors."""
+Do not resubmit any formula on the scoreboard.\nAnswer ONLY by calling the tool propose_factors (no other text)."""
 
 
 class ClaudeProposer:
     """Calls the Claude API. Needs ANTHROPIC_API_KEY in the environment."""
 
-    def __init__(self, model="claude-sonnet-5-5", max_tokens=4000, temperature=1.0):
+    def __init__(self, model="claude-sonnet-5-5", max_tokens=8000):
         import anthropic
-        self.client = anthropic.Anthropic()
-        self.model, self.max_tokens, self.temperature = model, max_tokens, temperature
+        # ask for gzip: some Anaconda installs ship an old brotli that breaks response decoding
+        self.client = anthropic.Anthropic(default_headers={"Accept-Encoding": "gzip, deflate"})
+        self.model, self.max_tokens = model, max_tokens
 
     def __call__(self, prompt: str) -> dict:
+        # tool_choice "auto": newer models do not allow forcing a specific tool;
+        # the prompt asks for the tool call, and plain-JSON text is accepted as a fallback.
         msg = self.client.messages.create(
-            model=self.model, max_tokens=self.max_tokens, temperature=self.temperature,
-            system=SYSTEM, tools=[TOOL], tool_choice={"type": "tool", "name": TOOL["name"]},
+            model=self.model, max_tokens=self.max_tokens,
+            system=SYSTEM, tools=[TOOL], tool_choice={"type": "auto"},
             messages=[{"role": "user", "content": prompt}],
         )
-        block = next(b for b in msg.content if b.type == "tool_use")
-        out = dict(block.input)
+        block = next((b for b in msg.content if getattr(b, "type", "") == "tool_use"), None)
+        if block is not None:
+            out = dict(block.input)
+        else:
+            text = "".join(getattr(b, "text", "") for b in msg.content)
+            start, end = text.find("{"), text.rfind("}")
+            if start < 0 or end <= start:
+                raise ValueError(f"no tool call or JSON in the reply (stop_reason={msg.stop_reason})")
+            out = json.loads(text[start:end + 1])
+        if not isinstance(out.get("factors"), list):
+            raise ValueError("reply has no 'factors' list")
         out["_usage"] = {"input_tokens": msg.usage.input_tokens, "output_tokens": msg.usage.output_tokens}
         out["_model"] = msg.model
+        out["_stop_reason"] = msg.stop_reason
         return out
 
 
