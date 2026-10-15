@@ -1,4 +1,4 @@
-"""Validate and evaluate saved Stage 1 predictions without retraining."""
+"""Validate and evaluate saved Stage 1 or Stage 2 predictions without retraining."""
 
 from pathlib import Path
 
@@ -38,7 +38,12 @@ def load_predictions(source):
     rf = frame.model.eq("random_forest")
     if not (baseline | lr | rf).all():
         raise ValueError("Unknown model")
-    if not frame.loc[baseline, "experiment"].eq("baseline").all() or not frame.loc[~baseline, "experiment"].isin(["A", "B", "C"]).all():
+    model_experiments = frame.loc[~baseline, "experiment"].astype(str)
+    valid_model_experiments = model_experiments.str.fullmatch(
+        r"[ABC](?:_[a-z0-9]+)*"
+    )
+    if (not frame.loc[baseline, "experiment"].eq("baseline").all()
+            or not valid_model_experiments.all()):
         raise ValueError("Invalid model/experiment combination")
     if frame.loc[baseline, "seed"].notna().any() or not frame.loc[lr, "seed"].eq(42).all() or not frame.loc[rf, "seed"].isin([0, 1, 2]).all():
         raise ValueError("Expected no baseline seed, LR seed 42, RF seeds 0/1/2")

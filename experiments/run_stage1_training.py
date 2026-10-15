@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.data import quarterly_split
+from src.data import quarterly_split, verify_canonical_data
 from src.evaluation import calculate_classification_metrics
 from src.features import FEATURE_SETS, build_stage1_features
 from src.models import fit_logistic_regression, fit_random_forest
@@ -114,6 +114,9 @@ if __name__ == "__main__":
     parser.add_argument("--data", type=Path, default=ROOT / "data/processed/aligned_daily_ohlcv_5y.csv")
     parser.add_argument("--output", type=Path, default=ROOT / "results")
     parser.add_argument("--year", type=int, default=2025)
+    parser.add_argument("--canonical-manifest", type=Path, default=ROOT / "configs/canonical_data_2025.json")
     args = parser.parse_args()
+    if args.data.resolve() == (ROOT / "data/processed/aligned_daily_ohlcv_5y.csv").resolve():
+        verify_canonical_data(ROOT, args.canonical_manifest, verify_stage2_profile=False)
     metrics, _ = run(args.data, args.output, args.year)
     print(metrics.to_string(index=False))

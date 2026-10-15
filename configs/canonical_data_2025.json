@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "status": "shared_canonical",
+  "sources": {
+    "five_year": {
+      "path": "data/processed/aligned_daily_ohlcv_5y.csv",
+      "sha256": "5972891e0f4859bccc5dfc31f600dbca026e7f25c52785f02e6846e3db7a07a7",
+      "rows": 5012,
+      "trading_dates": 1253,
+      "start_date": "2021-08-31",
+      "end_date": "2026-08-27"
+    },
+    "split_2025": {
+      "path": "data/processed/aligned_daily_ohlcv_2025_split.csv",
+      "sha256": "0bdac629836926a2807a77f1d01705f5862cf48156b9f7a9b7f5fe34de716287",
+      "rows": 1000,
+      "trading_dates": 250,
+      "start_date": "2025-01-02",
+      "end_date": "2025-12-31"
+    }
+  },
+  "stage2_profile": {
+    "name": "quarterly",
+    "path": "Stage2_Factor_Files/data/processed/quarterly",
+    "train_quarters": [1, 2],
+    "validation_quarters": [3],
+    "test_quarters": [4],
+    "purge_cross_partition_targets": true,
+    "usable_rows": {
+      "train": 121,
+      "validation": 63,
+      "test": 63
+    }
+  }
+}

@@ -25,11 +25,39 @@ python experiments/run_stage1_training.py --year 2025
 python -m unittest discover -s tests -v
 ```
 
-Predictions, provisional metrics, the summary table, exact seeds and split sizes
-are written to `results/`. The provisional metrics should be replaced or
-confirmed with Abu's shared evaluation framework after it is merged.
+Predictions, metrics, the summary table, exact seeds and split sizes are written
+to `results/`. The merged `src/evaluation` and `src/backtesting` modules validate
+the saved prediction schema, aggregate Random Forest seeds and apply
+validation-only selection.
 
-## Stage 2 candidate factors
+## Stage 2 quarterly factor comparison
 
-The separate `Stage2_Factor_Files` directory is preserved unchanged. See its
-own README for factor-generation instructions and limitations.
+Stage 2 compares the existing features against the same features plus the eight
+accepted LLM-generated factors. Both stages are checked against
+`configs/canonical_data_2025.json`, which fixes the shared data snapshot and the
+121/63/63 quarterly profile.
+
+Run validation first. This does not load Q4:
+
+```bash
+python experiments/run_stage2_training.py --phase validation
+```
+
+Review `results/stage2_2025/STAGE2_VALIDATION_2025.md` and the generated lock.
+Then run the preregistered final comparison once:
+
+```bash
+python experiments/run_stage2_training.py --phase final --confirm-locked-test
+```
+
+The final prediction CSV uses Abu's existing schema and goes directly through
+the shared evaluator and backtester. Taiyu's separate 70/15/15 return-regression
+experiment remains under its own notebook, result files and Stage 2 data profile;
+it is not mixed with this quarterly direction-classification comparison.
+
+Run all tests from the repository root:
+
+```bash
+python -m unittest discover -s tests -v
+python -m unittest discover -s Stage2_Factor_Files/tests -v
+```

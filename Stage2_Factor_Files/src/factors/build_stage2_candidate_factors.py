@@ -202,60 +202,6 @@ def calculate_factors(wide: pd.DataFrame) -> pd.DataFrame:
     )
     return factors
 
-
-def build_full_history_factor_table(five_year_path: Path,
-                                    start: str = "2021-09-01",
-                                    end: str = "2025-12-31") -> pd.DataFrame:
-    """Return Date + eight original factors, preserving every source trading day.
-
-    Keep earlier observations for rolling-window history. Missing values at
-    the beginning are retained when there is insufficient earlier history;
-    they are never filled with later observations or zeroes.
-    """
-    start_date, end_date = pd.Timestamp(start), pd.Timestamp(end)
-    if pd.isna(start_date) or pd.isna(end_date) or start_date > end_date:
-        raise ValueError("Invalid start/end dates")
-    history = _load_market_data(five_year_path)
-    if history["Date"].min() > start_date or history["Date"].max() < end_date:
-        raise ValueError("Source history does not cover the requested date range")
-    history = history.loc[history["Date"].le(end_date)].copy()
-    wide = _wide_ohlcv(history)
-    calculated = calculate_factors(wide)
-    factors = calculated.loc[calculated.index.to_series().between(start_date, end_date)].copy()
-    if factors.empty:
-        raise ValueError("No trading dates in the requested period")
-    expected_dates = pd.DatetimeIndex(sorted(history.loc[
-        history["Date"].between(start_date, end_date), "Date"].unique()), name="Date")
-    if not factors.index.equals(expected_dates):
-        raise ValueError("Factor dates do not match source trading dates")
-    values = factors[FACTOR_COLUMNS].to_numpy(dtype=float)
-    if np.isinf(values).any():
-        raise ValueError("Infinite factor values")
-    # Missing values are only allowed before each factor's first valid value.
-    for column in FACTOR_COLUMNS:
-        series = factors[column]
-        first_valid = series.first_valid_index()
-        if first_valid is None or series.loc[first_valid:].isna().any():
-            raise ValueError(f"Missing values beyond initial history window: {column}")
-    return factors[FACTOR_COLUMNS].reset_index()
-
-
-def write_full_history_outputs(table: pd.DataFrame, output_path: Path,
-                               five_year_path: Path, start: str, end: str) -> dict:
-    code_path = Path(__file__).resolve()
-    if output_path.resolve() in {five_year_path.resolve(), code_path}:
-        raise ValueError("Output must not overwrite source data or calculation code")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    table.to_csv(output_path, index=False, date_format="%Y-%m-%d", na_rep="")
-    incomplete = table.loc[table[FACTOR_COLUMNS].isna().any(axis=1), "Date"]
-    complete = table.loc[table[FACTOR_COLUMNS].notna().all(axis=1), "Date"]
-    return {
-        "rows_by_year": {str(year): int(count) for year, count in table.groupby(table["Date"].dt.year).size().items()},
-        "initial_incomplete_dates": incomplete.dt.strftime("%Y-%m-%d").tolist(),
-        "first_complete_date": complete.min().strftime("%Y-%m-%d") if len(complete) else None,
-    }
-
-
 def build_factor_table(five_year_path: Path, split_2025_path: Path,
                        output_path: Path | None = None) -> pd.DataFrame:
     history = _load_market_data(five_year_path)
@@ -354,37 +300,26 @@ def write_outputs(table: pd.DataFrame, output_path: Path,
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build Stage 2 factors with the original eight formulas")
+    parser = argparse.ArgumentParser(description="Build the 2025 Stage 2 candidate factor table")
     parser.add_argument("--repo-root", type=Path, help="Repository containing the shared data folder")
     parser.add_argument("--five-year", type=Path, help="Explicit source CSV, if autodetection is ambiguous")
     parser.add_argument("--split-2025", type=Path, help="Explicit 2025 source CSV")
-    parser.add_argument("--output", type=Path)
-    parser.add_argument("--full-history", action="store_true", help="Export one unsplit CSV with Date + eight factors")
-    parser.add_argument("--start", default="2021-09-01", help="First requested date for --full-history")
-    parser.add_argument("--end", default="2025-12-31", help="Last requested date for --full-history")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=PACKAGE_ROOT / "data" / "processed" / "quarterly" / "stage2_candidate_factor_table_2025.csv",
+    )
     args = parser.parse_args()
 
     try:
         five_year = resolve_input("aligned_daily_ohlcv_5y.csv", args.five_year, args.repo_root)
-        if args.full_history:
-            output = args.output or PACKAGE_ROOT / "data/processed/full_history/stage2_factors_2021_2025.csv"
-            result = build_full_history_factor_table(five_year, args.start, args.end)
-            report = write_full_history_outputs(result, output, five_year, args.start, args.end)
-        else:
-            output = args.output or PACKAGE_ROOT / "data/processed/stage2_candidate_factor_table_2025.csv"
-            split_2025 = resolve_input("aligned_daily_ohlcv_2025_split.csv", args.split_2025, args.repo_root)
-            result = build_factor_table(five_year, split_2025)
-            report = write_outputs(result, output, five_year, split_2025)
+        split_2025 = resolve_input("aligned_daily_ohlcv_2025_split.csv", args.split_2025, args.repo_root)
+        result = build_factor_table(five_year, split_2025)
+        report = write_outputs(result, args.output, five_year, split_2025)
     except (ValueError, OSError) as exc:
         parser.error(str(exc))
-    print(f"Saved {len(result)} rows and {len(result.columns)} columns to {output}")
-    if args.full_history:
-        print("Rows by year:", report["rows_by_year"])
-        print("Initial dates with unavailable factors:", len(report["initial_incomplete_dates"]))
-        print("First date with all factors:", report["first_complete_date"])
-        print("No train/validation/test split was applied.")
-    else:
-        print("Usable split rows:", report["usable_split_counts"])
+    print(f"Saved {len(result)} rows and {len(result.columns)} columns to {args.output}")
+    print("Usable split rows:", report["usable_split_counts"])
 
 
 if __name__ == "__main__":
