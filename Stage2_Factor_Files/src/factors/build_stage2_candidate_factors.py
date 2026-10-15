@@ -40,11 +40,11 @@ def resolve_input(filename: str, explicit: Path | None = None,
                   repo_root: Path | None = None) -> Path:
     """Resolve only the two documented data directories, independent of cwd."""
     if explicit is not None:
-        path = explicit.expanduser().resolve()
+        path = explicit.expanduser().absolute()
         if not path.is_file():
             raise ValueError(f"Input not found: {path}")
         return path
-    root = repo_root.resolve() if repo_root else PACKAGE_ROOT.parent
+    root = repo_root.absolute() if repo_root else PACKAGE_ROOT.parent
     candidates = [root / "data" / folder / filename
                   for folder in ["processed", "processed_5y_yahoo"]]
     found = [path for path in candidates if path.is_file()]
