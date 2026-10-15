@@ -60,26 +60,126 @@ class Stage2FactorTests(unittest.TestCase):
         self.assertLessEqual(self.parts["test"].target_date.max(), pd.Timestamp("2025-12-31"))
 
     def test_all_eight_formulas_independently(self):
-        for date in ["2025-01-02", "2025-06-30", "2025-09-30", "2025-12-31"]:
+        eps = 1e-12
+
+        for date in [
+            "2025-01-02",
+            "2025-06-30",
+            "2025-09-30",
+            "2025-12-31",
+        ]:
             with self.subTest(date=date):
                 t = self.wide.index.get_loc(pd.Timestamp(date))
-                def ret(ticker, n):
-                    c = self.wide[f"{ticker}_Close"].to_numpy()
-                    return c[t] / c[t - n] - 1
-                def vol(ticker):
-                    c = self.wide[f"{ticker}_Close"].to_numpy()[t-10:t+1]
-                    r = c[1:] / c[:-1] - 1
-                    return np.sqrt(np.sum((r - r.mean()) ** 2) / 9)
-                peers = (ret("MSFT", 5) + ret("NVDA", 5)) / 2
-                window = self.wide.iloc[t-4:t+1]
-                expected = [ret("AAPL", 5) - ret("QQQ", 5), ret("AAPL", 5) - peers,
-                    peers, abs(ret("MSFT", 5) - ret("NVDA", 5)),
-                    vol("AAPL") / (vol("QQQ") + 1e-12),
-                    ret("AAPL", 5) * (self.wide.AAPL_Volume.iloc[t] / np.mean(self.wide.AAPL_Volume.iloc[t-19:t+1].to_numpy()) - 1),
-                    ret("AAPL", 5) * ret("QQQ", 20),
-                    np.mean(((window.AAPL_Close - window.AAPL_Open) / (window.AAPL_High - window.AAPL_Low + 1e-12)).to_numpy())]
-                actual = self.table.loc[self.table.Date.eq(date), M.FACTOR_COLUMNS].iloc[0].to_numpy(dtype=float)
-                np.testing.assert_allclose(actual, expected, rtol=1e-10, atol=1e-12)
+
+                def price_ret(ticker, n, pos):
+                    close = self.wide[f"{ticker}_Close"]
+                    return close.iloc[pos] / close.iloc[pos - n] - 1.0
+
+                def volume_ret(ticker, n, pos):
+                    volume = self.wide[f"{ticker}_Volume"]
+                    return volume.iloc[pos] / volume.iloc[pos - n] - 1.0
+
+                peer_signed = np.mean([
+                    price_ret("MSFT", 3, j)
+                    + price_ret("NVDA", 3, j)
+                    for j in range(t - 4, t + 1)
+                ])
+
+                peer_dispersion = np.mean([
+                    abs(
+                        price_ret("MSFT", 3, j)
+                        - price_ret("NVDA", 3, j)
+                    )
+                    for j in range(t - 4, t + 1)
+                ])
+
+                peer_average_5d = (
+                    price_ret("MSFT", 5, t)
+                    + price_ret("NVDA", 5, t)
+                ) / 2.0
+
+                peer_relative = (
+                    price_ret("AAPL", 5, t)
+                    - peer_average_5d
+                )
+
+                aapl_risk = np.std([
+                    price_ret("AAPL", 2, j)
+                    for j in range(t - 9, t + 1)
+                ], ddof=1)
+
+                qqq_risk = np.std([
+                    price_ret("QQQ", 2, j)
+                    for j in range(t - 9, t + 1)
+                ], ddof=1)
+
+                relative_risk = aapl_risk / (qqq_risk + eps)
+
+                peer_volume = np.mean([
+                    volume_ret("MSFT", 3, j)
+                    + volume_ret("NVDA", 3, j)
+                    for j in range(t - 4, t + 1)
+                ])
+
+                volume_confirmation = (
+                    price_ret("AAPL", 3, t)
+                    * peer_volume
+                )
+
+                regime_interaction = (
+                    price_ret("AAPL", 5, t)
+                    - price_ret("QQQ", 5, t)
+                ) * qqq_risk
+
+                aapl_range = np.mean([
+                    (
+                        self.wide["AAPL_High"].iloc[j]
+                        - self.wide["AAPL_Low"].iloc[j]
+                    )
+                    / (self.wide["AAPL_Close"].iloc[j] + eps)
+                    for j in range(t - 4, t + 1)
+                ])
+
+                qqq_range = np.mean([
+                    (
+                        self.wide["QQQ_High"].iloc[j]
+                        - self.wide["QQQ_Low"].iloc[j]
+                    )
+                    / (self.wide["QQQ_Close"].iloc[j] + eps)
+                    for j in range(t - 4, t + 1)
+                ])
+
+                normalized_range_ratio = (
+                    aapl_range / (qqq_range + eps)
+                )
+
+                lagged_qqq_momentum = (
+                    price_ret("AAPL", 3, t)
+                    - price_ret("QQQ", 3, t - 2)
+                )
+
+                expected = [
+                    peer_signed,
+                    peer_dispersion,
+                    peer_relative,
+                    relative_risk,
+                    volume_confirmation,
+                    regime_interaction,
+                    normalized_range_ratio,
+                    lagged_qqq_momentum,
+                ]
+
+                actual = self.table.loc[
+                    self.table.Date.eq(date),
+                    M.FACTOR_COLUMNS,
+                ].iloc[0].to_numpy(dtype=float)
+
+                np.testing.assert_allclose(
+                    actual,
+                    expected,
+                    rtol=1e-10,
+                    atol=1e-12,
+                )
 
     def test_prefix_invariance(self):
         full = M.calculate_factors(self.wide)

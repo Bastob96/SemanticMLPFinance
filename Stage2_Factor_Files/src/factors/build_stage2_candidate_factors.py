@@ -13,20 +13,25 @@ import pandas as pd
 TICKERS = ["AAPL", "QQQ", "MSFT", "NVDA"]
 OHLCV = ["Open", "High", "Low", "Close", "Volume"]
 FACTOR_COLUMNS = [
-    "factor_rel_mom_aapl_qqq_5d",
-    "factor_rel_mom_aapl_peers_5d",
-    "factor_peer_confirmation_5d",
-    "factor_peer_disagreement_5d",
-    "factor_rel_vol_aapl_qqq_10d",
-    "factor_volume_confirmed_mom_5d_20d",
-    "factor_market_aligned_mom_5d_20d",
-    "factor_close_pressure_5d",
+    "peer_signed_return_confirmation",
+    "peer_return_dispersion",
+    "aapl_peer_consensus_relative_return",
+    "aapl_to_qqq_relative_realized_risk",
+    "peer_volume_confirmed_aapl_return",
+    "relative_return_market_risk_interaction",
+    "aapl_to_qqq_normalized_range_ratio",
+    "lagged_qqq_relative_momentum",
 ]
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 RAW_COLUMNS = [f"{ticker}_{field}" for ticker in TICKERS for field in OHLCV]
 FEATURE_SETS = {
-    "A": [FACTOR_COLUMNS[i] for i in [5, 7]],
-    "B": [FACTOR_COLUMNS[i] for i in [5, 7, 0, 4, 6]],
+    "A": [],
+    "B": [
+        "aapl_to_qqq_relative_realized_risk",
+        "relative_return_market_risk_interaction",
+        "aapl_to_qqq_normalized_range_ratio",
+        "lagged_qqq_relative_momentum",
+    ],
     "C": FACTOR_COLUMNS,
 }
 
@@ -91,49 +96,164 @@ def _wide_ohlcv(history: pd.DataFrame) -> pd.DataFrame:
 
 
 def calculate_factors(wide: pd.DataFrame) -> pd.DataFrame:
-    """Only current/past rows; no labels, fitted transforms or selection."""
-    close = wide[[f"{ticker}_Close" for ticker in TICKERS]].copy()
-    close.columns = TICKERS
-    volume = wide[[f"{ticker}_Volume" for ticker in TICKERS]].copy()
-    volume.columns = TICKERS
-
-    ret_1d = close.pct_change(fill_method=None)
-    ret_5d = close.div(close.shift(5)).sub(1.0)
-    ret_20d = close.div(close.shift(20)).sub(1.0)
-    peer_ret_5d = ret_5d[["MSFT", "NVDA"]].mean(axis=1)
+    """Calculate the eight accepted Stage 2 generated factors using only data at or before t."""
     eps = 1e-12
 
+    def price_return(ticker: str, periods: int) -> pd.Series:
+        return wide[f"{ticker}_Close"].pct_change(
+            periods=periods,
+            fill_method=None,
+        )
+
+    def volume_return(ticker: str, periods: int) -> pd.Series:
+        return wide[f"{ticker}_Volume"].pct_change(
+            periods=periods,
+            fill_method=None,
+        )
+
     factors = pd.DataFrame(index=wide.index)
-    factors["factor_rel_mom_aapl_qqq_5d"] = ret_5d["AAPL"] - ret_5d["QQQ"]
-    factors["factor_rel_mom_aapl_peers_5d"] = ret_5d["AAPL"] - peer_ret_5d
-    factors["factor_peer_confirmation_5d"] = peer_ret_5d
-    factors["factor_peer_disagreement_5d"] = (
-        ret_5d["MSFT"] - ret_5d["NVDA"]
-    ).abs()
 
-    vol_10d = ret_1d.rolling(10, min_periods=10).std(ddof=1)
-    factors["factor_rel_vol_aapl_qqq_10d"] = vol_10d["AAPL"].div(
-        vol_10d["QQQ"] + eps
-    )
+    # FCT-01
+    msft_ret_3d = price_return("MSFT", 3)
+    nvda_ret_3d = price_return("NVDA", 3)
 
-    aapl_volume_ratio_20d = volume["AAPL"].div(
-        volume["AAPL"].rolling(20, min_periods=20).mean()
-    ).sub(1.0)
-    factors["factor_volume_confirmed_mom_5d_20d"] = (
-        ret_5d["AAPL"] * aapl_volume_ratio_20d
-    )
-    factors["factor_market_aligned_mom_5d_20d"] = (
-        ret_5d["AAPL"] * ret_20d["QQQ"]
+    factors["peer_signed_return_confirmation"] = (
+        msft_ret_3d + nvda_ret_3d
+    ).rolling(5, min_periods=5).mean()
+
+    # FCT-02
+    factors["peer_return_dispersion"] = (
+        (msft_ret_3d - nvda_ret_3d)
+        .abs()
+        .rolling(5, min_periods=5)
+        .mean()
     )
 
-    daily_pressure = (wide["AAPL_Close"] - wide["AAPL_Open"]).div(
-        wide["AAPL_High"] - wide["AAPL_Low"] + eps
+    # FCT-03
+    aapl_ret_5d = price_return("AAPL", 5)
+    msft_ret_5d = price_return("MSFT", 5)
+    nvda_ret_5d = price_return("NVDA", 5)
+
+    factors["aapl_peer_consensus_relative_return"] = (
+        aapl_ret_5d - ((msft_ret_5d + nvda_ret_5d) / 2.0)
     )
-    factors["factor_close_pressure_5d"] = daily_pressure.rolling(
+
+    # FCT-04
+    aapl_risk_10d = (
+        price_return("AAPL", 2)
+        .rolling(10, min_periods=10)
+        .std(ddof=1)
+    )
+    qqq_risk_10d = (
+        price_return("QQQ", 2)
+        .rolling(10, min_periods=10)
+        .std(ddof=1)
+    )
+
+    factors["aapl_to_qqq_relative_realized_risk"] = (
+        aapl_risk_10d / (qqq_risk_10d + eps)
+    )
+
+    # FCT-05
+    peer_volume_change = (
+        volume_return("MSFT", 3)
+        + volume_return("NVDA", 3)
+    ).rolling(5, min_periods=5).mean()
+
+    factors["peer_volume_confirmed_aapl_return"] = (
+        price_return("AAPL", 3) * peer_volume_change
+    )
+
+    # FCT-06
+    relative_return_5d = (
+        price_return("AAPL", 5)
+        - price_return("QQQ", 5)
+    )
+
+    factors["relative_return_market_risk_interaction"] = (
+        relative_return_5d * qqq_risk_10d
+    )
+
+    # FCT-07
+    aapl_normalized_range = (
+        (wide["AAPL_High"] - wide["AAPL_Low"])
+        / (wide["AAPL_Close"] + eps)
+    )
+    qqq_normalized_range = (
+        (wide["QQQ_High"] - wide["QQQ_Low"])
+        / (wide["QQQ_Close"] + eps)
+    )
+
+    aapl_range_5d = aapl_normalized_range.rolling(
+        5, min_periods=5
+    ).mean()
+    qqq_range_5d = qqq_normalized_range.rolling(
         5, min_periods=5
     ).mean()
 
+    factors["aapl_to_qqq_normalized_range_ratio"] = (
+        aapl_range_5d / (qqq_range_5d + eps)
+    )
+
+    # FCT-08
+    factors["lagged_qqq_relative_momentum"] = (
+        price_return("AAPL", 3)
+        - price_return("QQQ", 3).shift(2)
+    )
     return factors
+
+
+def build_full_history_factor_table(five_year_path: Path,
+                                    start: str = "2021-09-01",
+                                    end: str = "2025-12-31") -> pd.DataFrame:
+    """Return Date + eight original factors, preserving every source trading day.
+
+    Keep earlier observations for rolling-window history. Missing values at
+    the beginning are retained when there is insufficient earlier history;
+    they are never filled with later observations or zeroes.
+    """
+    start_date, end_date = pd.Timestamp(start), pd.Timestamp(end)
+    if pd.isna(start_date) or pd.isna(end_date) or start_date > end_date:
+        raise ValueError("Invalid start/end dates")
+    history = _load_market_data(five_year_path)
+    if history["Date"].min() > start_date or history["Date"].max() < end_date:
+        raise ValueError("Source history does not cover the requested date range")
+    history = history.loc[history["Date"].le(end_date)].copy()
+    wide = _wide_ohlcv(history)
+    calculated = calculate_factors(wide)
+    factors = calculated.loc[calculated.index.to_series().between(start_date, end_date)].copy()
+    if factors.empty:
+        raise ValueError("No trading dates in the requested period")
+    expected_dates = pd.DatetimeIndex(sorted(history.loc[
+        history["Date"].between(start_date, end_date), "Date"].unique()), name="Date")
+    if not factors.index.equals(expected_dates):
+        raise ValueError("Factor dates do not match source trading dates")
+    values = factors[FACTOR_COLUMNS].to_numpy(dtype=float)
+    if np.isinf(values).any():
+        raise ValueError("Infinite factor values")
+    # Missing values are only allowed before each factor's first valid value.
+    for column in FACTOR_COLUMNS:
+        series = factors[column]
+        first_valid = series.first_valid_index()
+        if first_valid is None or series.loc[first_valid:].isna().any():
+            raise ValueError(f"Missing values beyond initial history window: {column}")
+    return factors[FACTOR_COLUMNS].reset_index()
+
+
+def write_full_history_outputs(table: pd.DataFrame, output_path: Path,
+                               five_year_path: Path, start: str, end: str) -> dict:
+    code_path = Path(__file__).resolve()
+    if output_path.resolve() in {five_year_path.resolve(), code_path}:
+        raise ValueError("Output must not overwrite source data or calculation code")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    table.to_csv(output_path, index=False, date_format="%Y-%m-%d", na_rep="")
+    incomplete = table.loc[table[FACTOR_COLUMNS].isna().any(axis=1), "Date"]
+    complete = table.loc[table[FACTOR_COLUMNS].notna().all(axis=1), "Date"]
+    return {
+        "rows_by_year": {str(year): int(count) for year, count in table.groupby(table["Date"].dt.year).size().items()},
+        "initial_incomplete_dates": incomplete.dt.strftime("%Y-%m-%d").tolist(),
+        "first_complete_date": complete.min().strftime("%Y-%m-%d") if len(complete) else None,
+    }
 
 
 def build_factor_table(five_year_path: Path, split_2025_path: Path,
@@ -234,22 +354,37 @@ def write_outputs(table: pd.DataFrame, output_path: Path,
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build the 2025 Stage 2 candidate factor table")
+    parser = argparse.ArgumentParser(description="Build Stage 2 factors with the original eight formulas")
     parser.add_argument("--repo-root", type=Path, help="Repository containing the shared data folder")
     parser.add_argument("--five-year", type=Path, help="Explicit source CSV, if autodetection is ambiguous")
     parser.add_argument("--split-2025", type=Path, help="Explicit 2025 source CSV")
-    parser.add_argument("--output", type=Path, default=PACKAGE_ROOT / "data" / "processed" / "stage2_candidate_factor_table_2025.csv")
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--full-history", action="store_true", help="Export one unsplit CSV with Date + eight factors")
+    parser.add_argument("--start", default="2021-09-01", help="First requested date for --full-history")
+    parser.add_argument("--end", default="2025-12-31", help="Last requested date for --full-history")
     args = parser.parse_args()
 
     try:
         five_year = resolve_input("aligned_daily_ohlcv_5y.csv", args.five_year, args.repo_root)
-        split_2025 = resolve_input("aligned_daily_ohlcv_2025_split.csv", args.split_2025, args.repo_root)
-        result = build_factor_table(five_year, split_2025)
-        report = write_outputs(result, args.output, five_year, split_2025)
+        if args.full_history:
+            output = args.output or PACKAGE_ROOT / "data/processed/full_history/stage2_factors_2021_2025.csv"
+            result = build_full_history_factor_table(five_year, args.start, args.end)
+            report = write_full_history_outputs(result, output, five_year, args.start, args.end)
+        else:
+            output = args.output or PACKAGE_ROOT / "data/processed/stage2_candidate_factor_table_2025.csv"
+            split_2025 = resolve_input("aligned_daily_ohlcv_2025_split.csv", args.split_2025, args.repo_root)
+            result = build_factor_table(five_year, split_2025)
+            report = write_outputs(result, output, five_year, split_2025)
     except (ValueError, OSError) as exc:
         parser.error(str(exc))
-    print(f"Saved {len(result)} rows and {len(result.columns)} columns to {args.output}")
-    print("Usable split rows:", report["usable_split_counts"])
+    print(f"Saved {len(result)} rows and {len(result.columns)} columns to {output}")
+    if args.full_history:
+        print("Rows by year:", report["rows_by_year"])
+        print("Initial dates with unavailable factors:", len(report["initial_incomplete_dates"]))
+        print("First date with all factors:", report["first_complete_date"])
+        print("No train/validation/test split was applied.")
+    else:
+        print("Usable split rows:", report["usable_split_counts"])
 
 
 if __name__ == "__main__":
