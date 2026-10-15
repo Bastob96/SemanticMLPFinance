@@ -52,7 +52,54 @@ Every round goes through the same five steps:
 4. **I keep it or throw it away.** It has to help in at least 3 of the 4 years, and by more than random luck would.
 5. **The results go back to Claude** in the next round, including what failed and why.
 
-Nobody picks the factors by hand, and Q4 is never used during the loop. It is saved for the final test in Step 10."""))
+Nobody picks the factors by hand, and Q4 is never used during the loop. It is saved for the final test in Step 10.
+
+The code below is the loop itself. I ran it once from Terminal (`python experiments/run_stage2_loop.py --rounds 8`), because talking to Claude costs money and takes a few minutes. Everything Claude sent back was saved, so in this notebook I reuse those saved answers instead of asking Claude again. In Step 6 I re-run one full round with them."""))
+
+cells.append(code("""# Section 2: The loop, written out (the same steps as src/stage2/loop.py)
+from src.stage2.llm import SYSTEM, TOOL
+from src.stage2.formula import evaluate, FormulaError
+
+def ask_claude(prompt):
+    \"\"\"1. Send the instructions to Claude and get back its reflection and 6 factors.\"\"\"
+    import anthropic
+    client = anthropic.Anthropic(default_headers={'Accept-Encoding': 'gzip, deflate'})
+    reply = client.messages.create(model='claude-sonnet-5-5', max_tokens=8000, system=SYSTEM,
+                                   tools=[TOOL], tool_choice={'type': 'auto'},
+                                   messages=[{'role': 'user', 'content': prompt}])
+    answer = next(block for block in reply.content if block.type == 'tool_use')
+    return answer.input            # {'reflection': '...', 'factors': [6 factors]}
+
+def keep_or_reject(years_helped, average_gain, similarity):
+    \"\"\"4. The keep rule.\"\"\"
+    reasons = []
+    if years_helped < 3:
+        reasons.append(f'helped only {years_helped}/4 years')
+    if average_gain < 0.01:
+        reasons.append('gain below 0.01')
+    if similarity >= 0.9:
+        reasons.append('copy of a factor I already have')
+    return ('kept', '') if not reasons else ('rejected', '; '.join(reasons))
+
+def one_round(prompt, ask=ask_claude):
+    \"\"\"One round of the loop. The table it returns goes back to Claude in the next prompt (step 5).\"\"\"
+    reply = ask(prompt)                                          # 1. Claude suggests 6 factors
+    rows = []
+    for factor in reply['factors']:
+        try:
+            values = evaluate(factor['formula'], prices)         # 2. build it from the formula
+        except FormulaError as problem:
+            rows.append({'name': factor['name'], 'status': 'refused', 'reason': str(problem)})
+            continue
+        gains = test_factor(factor['name'], values)              # 3. test it on 2022-2025
+        similarity, closest = most_similar(values)
+        years_helped = sum(gain > 0 for gain in gains.values())
+        average_gain = sum(gains.values()) / len(gains)
+        status, reason = keep_or_reject(years_helped, average_gain, similarity)   # 4. keep or reject
+        rows.append({'name': factor['name'], **{str(y): round(float(g), 3) for y, g in gains.items()},
+                     'average_gain': round(float(average_gain), 4), 'years_helped': f'{years_helped}/4',
+                     'similarity': round(float(similarity), 2), 'status': status, 'reason': reason})
+    return pd.DataFrame(rows)"""))
 
 cells.append(md("""## Step 3: Turning Claude's Formula into Numbers
 
@@ -132,7 +179,61 @@ For every factor, in every year: train on Q1-Q2 with the 22 factors plus the new
 * **years**: in how many of the 4 years it helped
 * **max_corr**: how similar it is to a factor I already have (0.9 or more means it is basically a copy)"""))
 
-cells.append(code("""# Section 6: Every factor Claude suggested and how it scored
+cells.append(code("""# Section 6a: How one factor is tested (step 3 of the loop)
+from sklearn.metrics import roc_auc_score
+from src.data import quarterly_split
+from src.features import FEATURE_SETS
+from src.models import fit_logistic_regression, fit_random_forest
+
+BASE = FEATURE_SETS['C']                     # my 22 Stage 1 factors
+TARGET = 'target_next_day_up'
+YEARS = [2022, 2023, 2024, 2025]
+features['Date'] = pd.to_datetime(features['Date'])
+
+def q3_auc(train, val, columns):
+    \"\"\"Train on Q1-Q2, score on Q3. Average AUC of Logistic Regression (seed 42) and Random Forest (seeds 0, 1, 2).\"\"\"
+    models = [fit_logistic_regression(train[columns], train[TARGET], 42)]
+    models += [fit_random_forest(train[columns], train[TARGET], seed) for seed in (0, 1, 2)]
+    return np.mean([roc_auc_score(val[TARGET], m.predict_proba(val[columns])[:, 1]) for m in models])
+
+base_auc = {year: q3_auc(quarterly_split(features, year)['train'], quarterly_split(features, year)['validation'], BASE)
+            for year in YEARS}       # the 22 factors alone, worked out once per year
+
+def test_factor(name, values):
+    \"\"\"How much the Q3 score goes up in each year when this factor is added to the 22.\"\"\"
+    data = features.merge(values.rename(name), left_on='Date', right_index=True, how='left')
+    gains = {}
+    for year in YEARS:
+        split = quarterly_split(data, year)
+        train, val = split['train'].copy(), split['validation'].copy()
+        low, high = train[name].quantile([0.01, 0.99])          # trim extreme values, using training data only
+        train[name], val[name] = train[name].clip(low, high), val[name].clip(low, high)
+        gains[year] = q3_auc(train, val, BASE + [name]) - base_auc[year]
+    return gains
+
+check_days = features['Date'][(features['Date'].dt.year >= 2022) & (features['Date'].dt.month <= 9)]
+def most_similar(values):
+    \"\"\"How similar the new factor is to the closest of my 22 factors (Q1-Q3 days only, never Q4).\"\"\"
+    existing = stage1.loc[check_days, BASE]
+    similarity = existing.corrwith(values.reindex(existing.index), method='spearman').abs()
+    return similarity.max(), similarity.idxmax()
+
+print('Q3 score of the 22 factors alone:', {year: round(float(auc), 3) for year, auc in base_auc.items()})"""))
+
+cells.append(code("""# Section 6b: Re-run round 4 with the answer Claude gave in that round
+saved_answer = json.loads((LLM_RUN / 'round_04_response.json').read_text())
+prompt = (LLM_RUN / 'round_04_prompt.txt').read_text()
+
+round_4 = one_round(prompt, ask=lambda prompt: saved_answer)   # same loop code, Claude's saved reply instead of a new call
+round_4"""))
+
+cells.append(md("""**Reading this output**
+
+* This is round 4 run again with the code above, using Claude's saved answer. The years show how much the Q3 score went up (+) or down (-) when the factor was added.
+* `nvda_range_vs_aapl_range` helped in 2023, 2024 and 2025 by about 0.012 on average, so it is **kept**. The other 5 are rejected, each with its reason.
+* All 6 factors get the same keep or reject decision as in the real run (next table). The numbers can differ slightly, because the run was done on a different computer with a slightly different version of scikit-learn."""))
+
+cells.append(code("""# Section 6c: Every factor Claude suggested and how it scored
 show = llm_board.assign(years=llm_board.years_helped.astype(str) + '/4')[
     ['round', 'name', 'mode', 'auc_gain', 'years', 'max_corr', 'status', 'reason']]
 print(llm_board.status.value_counts().to_string(), '\\n')
