@@ -1,0 +1,47 @@
+{
+  "reflection": "random proposer (no LLM)",
+  "factors": [
+    {
+      "name": "random_967922",
+      "mode": "variant",
+      "parent": "",
+      "formula": "rolling_mean(multiply(sign(pct_change(NVDA_Close, 1)), zscore(NVDA_Volume, 10)), 20)",
+      "hypothesis": "random baseline"
+    },
+    {
+      "name": "random_851054",
+      "mode": "variant",
+      "parent": "",
+      "formula": "safe_divide(subtract(QQQ_Close, QQQ_Open), subtract(QQQ_High, QQQ_Low))",
+      "hypothesis": "random baseline"
+    },
+    {
+      "name": "random_607854",
+      "mode": "variant",
+      "parent": "",
+      "formula": "subtract(pct_change(MSFT_Close, 10), pct_change(QQQ_Close, 10))",
+      "hypothesis": "random baseline"
+    },
+    {
+      "name": "random_340079",
+      "mode": "new",
+      "parent": "",
+      "formula": "safe_divide(rolling_std(pct_change(AAPL_Close, 1), 10), rolling_std(pct_change(QQQ_Close, 1), 10))",
+      "hypothesis": "random baseline"
+    },
+    {
+      "name": "random_254841",
+      "mode": "new",
+      "parent": "",
+      "formula": "subtract(safe_divide(AAPL_Close, rolling_max(AAPL_High, 3)), 1)",
+      "hypothesis": "random baseline"
+    },
+    {
+      "name": "random_231169",
+      "mode": "new",
+      "parent": "",
+      "formula": "subtract(pct_change(MSFT_Close, 5), pct_change(AAPL_Close, 5))",
+      "hypothesis": "random baseline"
+    }
+  ]
+}

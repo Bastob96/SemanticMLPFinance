@@ -1,0 +1,11 @@
+{
+  "rounds": 8,
+  "variants": 3,
+  "new": 3,
+  "proposer": "random",
+  "model": "claude-sonnet-5-5",
+  "seed": 0,
+  "out": "results/stage2/runs/20261015_1645_random",
+  "resume": false,
+  "started": "2026-10-15T06:11:47.589755"
+}
