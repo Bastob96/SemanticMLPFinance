@@ -49,13 +49,17 @@ thrown away. Version 2 (`loop_v2.py`) keeps the same formula language, data spli
    Apple-own), are tested two at a time. Both join if the pair helps in >= 3 of 4 years, reaches the
    pair bar, and its gain is above the two members' gains added up by the extra-gain bar (two lucky
    factors only add up their luck, so "better than the better one alone" lets noise in; see the noise check).
-4. **Promising list**: factors that are weak alone but show some sign of life are kept for later pairs
-   and get one more team trial at the end. Nothing is thrown away only for being weak alone.
+4. **Promising list**: factors that are weak alone but show some sign of life are kept for later pairs.
+   Nothing is thrown away only for being weak alone. (A second team trial for the whole list at the end
+   is available with `--final-check`, but the random-number check showed it lets luck in, so it is off.)
 5. **Prompt** (`prompt_v2.py`): each round Claude writes a lesson for every factor of the last round
    and proposes IMPROVE, NEW and PARTNER factors (a partner is designed to work with a promising or
    selected factor), labelling each with a role.
 The team and pair bars are set with random-number factors before any real run
 (`experiments/calibrate_noise_v2.py` writes `results/stage2/rules_v2.json`).
+In Stage 2 the Random Forest always considers 4 inputs per split (`RF_MAX_FEATURES` in `scoring.py`):
+with the default it jumps to 5 at 25 factors, which made even random columns look useful in team trials.
+The 22-factor models and all single-factor tests are unchanged by this.
 
 ```
 python experiments/calibrate_noise_v2.py --n 48                       # once: sets the bars

@@ -6,13 +6,21 @@ Same idea as experiments/calibrate_noise.py (version 1), now for the two new tes
 The pairs are tried twice: random pairs of noise factors, and pairs of noise factors that look "promising"
 (the loop only pairs promising factors, so the members were already lucky once).
 
-What the first check showed (20 Oct): two lucky noise factors added together simply add up their luck,
-so "the pair beats the better one alone" passed for about half of the promising noise pairs. The pair rule
-therefore compares the pair with the two gains ADDED UP ("extra" = pair gain - gain of a alone - gain of b
-alone, all on top of the same team). Luck adds up; real teamwork gives more than the sum.
+What the first checks showed (20 Oct):
+  1. Two lucky noise factors added together simply add up their luck, so "the pair beats the better one
+     alone" passed for about half of the promising noise pairs. The pair rule therefore compares the pair
+     with the two gains ADDED UP ("extra" = pair gain - gain of a alone - gain of b alone, all on top of the
+     same team). Luck adds up; real teamwork gives more than the sum.
+  2. With the Random Forest's default setting, the number of inputs it considers at each split jumps from
+     4 to 5 when the model reaches 25 factors (22 + 3). Any extra column then changed the forest itself, and
+     8 of 18 promising noise factors passed the team trial on a 2-factor team. Stage 2 now fixes it at 4
+     (src/stage2/scoring.py, RF_MAX_FEATURES); the 22-factor models and single-factor tests are unchanged.
+  3. Giving every promising factor a second team trial at the end ("second chance") still let 1 in 18
+     promising noise factors in, so the loop does not do it by default.
 
 Usage: python experiments/calibrate_noise_v2.py --n 48 --pairs 64
-Writes results/stage2/noise_null_v2_team.csv, noise_null_v2_pairs.csv and rules_v2.json.
+Writes results/stage2/noise_null_v2_team.csv, noise_null_v2_pairs.csv, noise_null_v2_second_chance.csv
+and rules_v2.json.
 """
 
 from __future__ import annotations
@@ -93,12 +101,27 @@ if __name__ == "__main__":
     pair_df = pd.DataFrame(pair_rows)
     pair_df.to_csv(OUT / "noise_null_v2_pairs.csv", index=False)
 
+    # second chance: the promising noise factors tried again on top of a bigger team (2 real factors)
+    board_a = pd.read_csv(args.team_run / "scoreboard.csv").set_index("name")
+    team2 = {**team, "msft_nvda_close_position_diff": evaluate(board_a.loc["msft_nvda_close_position_diff", "formula"], prices)}
+    second = []
+    for n in promising:
+        res = summarise_result(scorer.gains({n: noise[n]}, team2))
+        second.append({"factor": n, "first_gain": team_df.loc[n, "gain"], "first_years": team_df.loc[n, "years"],
+                       "gain": res["gain"], "years": res["years"]})
+        print(f"  second chance {n}: {team_df.loc[n, 'gain']:+.4f} -> {res['gain']:+.4f} ({res['years']}/4)", flush=True)
+    second = pd.DataFrame(second)
+    second.to_csv(OUT / "noise_null_v2_second_chance.csv", index=False)
+
     print("\nTEAM TRIAL: share of noise factors that would join the team")
     for bar in (0.0, 0.005, 0.01, 0.015):
         share = ((team_df.years >= 3) & (team_df.gain >= bar)).mean()
         print(f"  helped 3+/4 years and gain >= {bar:.3f}: {share:.0%}")
     print(f"  noise team-trial gain: mean {team_df.gain.mean():+.4f}, std {team_df.gain.std():.4f}; "
           f"{len(promising)} of {len(team_df)} look promising")
+
+    passed = int(((second.years >= 3) & (second.gain >= 0.01)).sum())
+    print(f"\nSECOND CHANCE: {passed} of {len(second)} promising noise factors pass the team trial on a 2-factor team")
 
     print("\nPAIR TRIAL: share of noise pairs that would join the team")
     for kind in ("random", "promising"):

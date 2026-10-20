@@ -8,8 +8,9 @@ For each run:
 Nothing here is used to choose factors: the runs are fixed before this script is run.
 
 Usage:
+    python experiments/compare_stage2_runs.py          # A = 15 Oct run, B = latest replay, C = latest v2 Claude run
     python experiments/compare_stage2_runs.py A=results/stage2/runs/20261015_1635_claude \
-        B=results/stage2/runs/<replay run> C=results/stage2/runs/<new run>
+        B=results/stage2/runs_v2/<replay run> C=results/stage2/runs_v2/<claude run>
 Writes results/stage2/comparison/summary.csv and by_year.csv.
 """
 
@@ -36,7 +37,12 @@ OUT = ROOT / "results/stage2/comparison"
 if __name__ == "__main__":
     runs = [a.split("=", 1) for a in sys.argv[1:]]
     if not runs:
-        sys.exit(__doc__)
+        v2 = sorted((ROOT / "results/stage2/runs_v2").glob("*"))
+        replay = [r for r in v2 if "_replay_" in r.name]
+        claude = [r for r in v2 if r.name.endswith("_claude")]
+        runs = [("A", ROOT / "results/stage2/runs/20261015_1635_claude")]
+        runs += [("B", replay[-1])] if replay else []
+        runs += [("C", claude[-1])] if claude else []
     OUT.mkdir(parents=True, exist_ok=True)
     raw = pd.read_csv(ROOT / "data/processed/aligned_daily_ohlcv_5y.csv")
     features, prices = build_stage1_features(raw), wide_prices(raw)

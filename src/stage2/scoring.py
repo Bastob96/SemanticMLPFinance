@@ -29,12 +29,17 @@ TARGET = "target_next_day_up"
 BASE = FEATURE_SETS["C"]
 YEARS = (2022, 2023, 2024, 2025)
 LR_SEED, RF_SEEDS = 42, (0, 1, 2)
+# Inputs the forest considers at each split. Stage 1's default ("sqrt") gives 4 for 22-24 factors but 5 from
+# 25 factors on, so adding a 3rd team factor (or a pair on top of a 1-factor team) would change the forest
+# itself, and even random numbers then looked useful (20 Oct check). Fixed at 4, the same as Stage 1 uses
+# for the 22 factors, so the 22-factor models and every single-factor test are unchanged.
+RF_MAX_FEATURES = 4
 
 
 def _models(x, y):
     yield "logistic_regression", fit_logistic_regression(x, y, LR_SEED)
     for seed in RF_SEEDS:
-        yield f"random_forest_{seed}", fit_random_forest(x, y, seed)
+        yield f"random_forest_{seed}", fit_random_forest(x, y, seed, max_features=RF_MAX_FEATURES)
 
 
 def _fit_score(train, val, columns, importance_of=None, repeats=20):

@@ -13,7 +13,8 @@ Every round:
      (two lucky factors only add up their luck; real teamwork gives more than the sum).
   6. Factors that are weak alone but show some sign of life stay on the promising list.
   7. Everything is saved and goes back to Claude in the next round.
-At the end, the promising list gets one more team trial against the final team.
+finalize() gives the promising list one more team trial at the end. It is off by default in
+experiments/run_stage2_loop_v2.py because the random-number check showed it lets luck in (1 in 18).
 The Q4 test quarters are never used here.
 """
 

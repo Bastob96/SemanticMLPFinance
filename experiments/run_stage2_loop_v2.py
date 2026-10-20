@@ -46,7 +46,8 @@ if __name__ == "__main__":
     ap.add_argument("--replay", type=Path, help="run folder whose factors are replayed (--proposer replay)")
     ap.add_argument("--model", default="claude-sonnet-5-5")
     ap.add_argument("--seed", type=int, default=0, help="template proposer only")
-    ap.add_argument("--no-final-check", action="store_true", help="skip the last check of the promising list")
+    ap.add_argument("--final-check", action="store_true",
+                    help="give the promising list one more team trial at the end (off: lets random numbers in, see calibrate_noise_v2.py)")
     ap.add_argument("--out", type=Path)
     ap.add_argument("--resume", action="store_true")
     args = ap.parse_args()
@@ -92,7 +93,7 @@ if __name__ == "__main__":
             sys.exit(f"Stopped at round {r}. Re-run with --resume --out {out}")
         print(f"  team now: {loop.team or '(empty)'} | {loop.log[-1]['seconds']:.0f}s", flush=True)
 
-    if not args.no_final_check:
+    if args.final_check:
         print("Final check of the promising list against the final team", flush=True)
         loop.finalize()
     print(f"\nDone. Results in {out}")

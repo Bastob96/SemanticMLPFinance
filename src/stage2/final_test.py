@@ -3,7 +3,8 @@
 For each year: train on Q1-Q2 with (a) the 22 Stage 1 factors and (b) the 22 plus
 the kept LLM factors, predict Q4, and compare balanced accuracy, ROC AUC and a
 long/flat backtest (src.backtesting.simulate_long_flat) against buy-and-hold.
-Random Forest predictions are the average probability of seeds 0, 1 and 2.
+Random Forest predictions are the average probability of seeds 0, 1 and 2. The forest considers 4 inputs at
+each split for every factor set (see RF_MAX_FEATURES in scoring.py), so only the factors differ.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from src.data import quarterly_split
 from src.models import fit_logistic_regression, fit_random_forest
 
 from .formula import evaluate
-from .scoring import BASE, LR_SEED, RF_SEEDS, TARGET, YEARS
+from .scoring import BASE, LR_SEED, RF_MAX_FEATURES, RF_SEEDS, TARGET, YEARS
 
 
 def _clip(train, test, cols):
@@ -45,7 +46,7 @@ def run_final_test(features, prices_wide, raw_prices, kept, years=YEARS):
             probs = {
                 "logistic_regression": fit_logistic_regression(train[cols], train[TARGET], LR_SEED)
                 .predict_proba(test[cols])[:, 1],
-                "random_forest": np.mean([fit_random_forest(train[cols], train[TARGET], seed)
+                "random_forest": np.mean([fit_random_forest(train[cols], train[TARGET], seed, max_features=RF_MAX_FEATURES)
                                           .predict_proba(test[cols])[:, 1] for seed in RF_SEEDS], axis=0),
             }
             for model, p in probs.items():

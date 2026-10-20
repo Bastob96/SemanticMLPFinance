@@ -101,7 +101,7 @@ cells.append(md("""## Step 2: What Changed
 | What Claude sees | a scoreboard line per factor: average gain, years helped | a **report card** per factor: gain in each year, LR vs RF, similarity, kept or not and why, and its own lesson |
 | How a factor is tested | **alone**: added to my 22 factors | alone, then **on top of the selected team**, and **in pairs** |
 | Who gets kept | factors that help alone | factors that make the team better, alone or as a pair |
-| Weak-alone factors | thrown away | kept on a **promising list** for pair trials and a last check |
+| Weak-alone factors | thrown away | kept on a **promising list** for pair trials |
 | What Claude is asked for | 3 variants + 3 new ideas | 2 **improve** + 2 **new** + 2 **partner** factors, plus a lesson for every factor of the last round |
 
 Everything else is the same as last week: the formula language (past data only), the four years 2022-2025 (train on Q1-Q2, check on Q3), Logistic Regression and Random Forest, and Q4 is only used once, in the final test.
@@ -175,15 +175,17 @@ The gain is always "check score (ROC AUC on Q3) with the new factor(s) minus wit
 cells.append(module_cell("src/stage2/scoring.py", "Section 5a: Testing factors alone, on top of the team, or in a pair"))
 cells.append(module_cell("src/stage2/selection.py", "Section 5b: The rules for the team, the pairs and the promising list"))
 
-cells.append(md("""The loop itself. One round: ask Claude, check and compute each formula, test each factor alone, run the team trial, run a few pair trials, then update the team, the promising list and the report cards. At the end, everything left on the promising list gets one more team trial against the final team."""))
+cells.append(md("""The loop itself. One round: ask Claude, check and compute each formula, test each factor alone, run the team trial, run a few pair trials, then update the team, the promising list and the report cards."""))
 
 cells.append(module_cell("src/stage2/loop_v2.py", "Section 5c: The new loop"))
 
 cells.append(md("""## Step 6: Setting the New Bars with Random Numbers
 
-Same idea as last week's fake-factor test: before any real run, I put factors made of **pure random numbers** through the new tests, and counted how often they would get into the team by luck. The bars were fixed before the real runs and are the same for B and C.
+Same idea as last week's fake-factor test: before any real run, I put factors made of **pure random numbers** through the new tests and counted how often they would get into the team by luck. The bars were fixed before the real runs and are the same for B and C. This check found three problems, and each one changed the design:
 
-This check changed the pair rule. My first rule was "the pair must beat the better of its two members alone". Random pairs passed it far too often. A random factor that looks promising was a little lucky on its own, and when two lucky factors are put together their luck simply adds up, so the pair always looks better than either one. The rule now is: **the pair's gain must be clearly above the two members' gains added up.** Luck adds up; real teamwork gives more than the sum."""))
+1. **Lucky pairs.** My first pair rule was "the pair must beat the better of its two members alone". A random factor that looks promising was a little lucky on its own. Put two lucky ones together and their luck simply adds up, so the pair always looks better than either one: 42% of promising random pairs passed. The rule now is: **the pair's gain must be clearly above the two gains added up.** Luck adds up; real teamwork gives more than the sum.
+2. **The forest changed by itself.** With its default setting, the Random Forest looks at 4 factors at each split when it has up to 24 factors, but at 5 from 25 factors on. So on a team of 2, adding *any* extra column changed the forest itself, and 8 of 18 promising random factors passed the team trial. Now the forest always looks at 4 factors per split. For my 22 factors and for every single-factor test this is exactly what it did before, so last week's numbers do not change.
+3. **Second chances.** I had planned to give every factor on the promising list one more team trial at the end. Even after fix 2, about 1 in 18 promising random factors got in that way, so this step is switched off."""))
 
 cells.append(code("""# Section 6: How often random numbers would get into the team
 noise_team = pd.read_csv('results/stage2/noise_null_v2_team.csv', index_col=0)
@@ -205,6 +207,10 @@ for kind in ['random', 'promising']:
     rows.append({'test': f'pair trial ({len(d)} {kind} pairs)',
                  'rule': f"final rule: gain >= {rules['pair_gain']}, and {rules['pair_synergy']} above the two added up",
                  'random factors getting in': f'{final:.0%}'})
+second = pd.read_csv('results/stage2/noise_null_v2_second_chance.csv')
+share = ((second.years >= 3) & (second.gain >= rules['team_gain'])).mean()
+rows.append({'test': f'second chance ({len(second)} promising random factors)',
+             'rule': 'team trial again, on a 2-factor team', 'random factors getting in': f'{share:.0%}'})
 display(pd.DataFrame(rows))"""))
 note("noise")
 
@@ -325,7 +331,6 @@ def run_loop_v2(rounds=ROUNDS):
     for r in range(1, rounds + 1):
         print(f'Round {r}')
         loop.run_round(r)
-    loop.finalize()
     print('Selected team:', loop.team, '| saved in', out)
     return loop
 
