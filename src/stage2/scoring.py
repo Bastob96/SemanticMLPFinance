@@ -66,36 +66,58 @@ class Scorer:
     def __post_init__(self):
         self.features = self.features.copy()
         self.features["Date"] = pd.to_datetime(self.features["Date"])
-        self._base = {}
+        self._base = {}          # (year, team names) -> scores of the models without the new factor(s)
         for year in self.years:
             s = quarterly_split(self.features, year)
-            self._base[year] = _fit_score(s["train"], s["validation"], BASE).set_index("model")
+            self._base[(year, ())] = _fit_score(s["train"], s["validation"], BASE).set_index("model")
 
     def score(self, name: str, values: pd.Series) -> pd.DataFrame:
-        """values: factor indexed by Date. Returns one row per year."""
-        values = pd.Series(values, name=name)
-        values.index = pd.to_datetime(values.index)
-        data = self.features.merge(values.rename(name), left_on="Date", right_index=True, how="left")
+        """values: factor indexed by Date. Returns one row per year (gain over the 22 factors)."""
+        return self.gains({name: values}, team={}, importance_of=name)
+
+    def gains(self, add: dict, team: dict, importance_of=None) -> pd.DataFrame:
+        """Gain from adding the factor(s) in `add` on top of the 22 factors plus `team`.
+
+        add, team: {name: values indexed by Date}. With an empty team this is the solo test;
+        with the selected team it is the team trial; with two factors in `add` it is a pair trial.
+        Returns one row per year: auc_gain (mean of LR and the 3 RF seeds), auc_gain_lr,
+        auc_gain_rf, bal_acc_gain and, if requested, the permutation importance of one factor.
+        """
+        add_names, team_names = list(add), sorted(team)
+        label = "+".join(add_names)
+        data = self.features
+        for name, values in {**team, **add}.items():
+            values = pd.Series(values, name=name)
+            values.index = pd.to_datetime(values.index)
+            data = data.merge(values.rename(name), left_on="Date", right_index=True, how="left")
+        extra = team_names + add_names
         rows = []
         for year in self.years:
             s = quarterly_split(data, year)
             train, val = s["train"], s["validation"]
-            if train[name].isna().any() or val[name].isna().any() or not np.isfinite(train[name]).all() \
-                    or train[name].nunique() < 3:
-                rows.append({"factor": name, "year": year, "valid": False})
+            bad = [c for c in extra if train[c].isna().any() or val[c].isna().any()
+                   or not np.isfinite(train[c]).all() or train[c].nunique() < 3]
+            if bad:
+                rows.append({"factor": label, "year": year, "valid": False})
                 continue
             # tame extreme values using the training quarters' 1st/99th percentiles (no peeking at validation)
-            lo, hi = train[name].quantile([0.01, 0.99])
             train, val = train.copy(), val.copy()
-            train[name], val[name] = train[name].clip(lo, hi), val[name].clip(lo, hi)
-            cand = _fit_score(train, val, BASE + [name], importance_of=name).set_index("model")
-            gain = cand[["auc", "bal_acc"]] - self._base[year][["auc", "bal_acc"]]
-            rows.append({"factor": name, "year": year, "valid": True,
-                         "auc_gain": gain["auc"].mean(),
-                         "auc_gain_lr": gain.loc["logistic_regression", "auc"],
-                         "auc_gain_rf": gain.drop("logistic_regression")["auc"].mean(),
-                         "bal_acc_gain": gain["bal_acc"].mean(),
-                         "importance": cand["importance"].mean()})
+            for c in extra:
+                lo, hi = train[c].quantile([0.01, 0.99])
+                train[c], val[c] = train[c].clip(lo, hi), val[c].clip(lo, hi)
+            key = (year, tuple(team_names))
+            if key not in self._base:
+                self._base[key] = _fit_score(train, val, BASE + team_names).set_index("model")
+            base = self._base[key]
+            cand = _fit_score(train, val, BASE + team_names + add_names, importance_of=importance_of).set_index("model")
+            gain = cand[["auc", "bal_acc"]] - base[["auc", "bal_acc"]]
+            row = {"factor": label, "year": year, "valid": True,
+                   "auc_gain": gain["auc"].mean(),
+                   "auc_gain_lr": gain.loc["logistic_regression", "auc"],
+                   "auc_gain_rf": gain.drop("logistic_regression")["auc"].mean(),
+                   "bal_acc_gain": gain["bal_acc"].mean()}
+            row["importance"] = cand["importance"].mean() if importance_of is not None else float("nan")
+            rows.append(row)
         return pd.DataFrame(rows)
 
 

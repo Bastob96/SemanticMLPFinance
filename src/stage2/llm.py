@@ -93,18 +93,19 @@ Do not resubmit any formula on the scoreboard.\nAnswer ONLY by calling the tool 
 class ClaudeProposer:
     """Calls the Claude API. Needs ANTHROPIC_API_KEY in the environment."""
 
-    def __init__(self, model="claude-sonnet-5-5", max_tokens=8000):
+    def __init__(self, model="claude-sonnet-5-5", max_tokens=8000, tool=None, system=None):
         import anthropic
         # ask for gzip: some Anaconda installs ship an old brotli that breaks response decoding
         self.client = anthropic.Anthropic(default_headers={"Accept-Encoding": "gzip, deflate"})
         self.model, self.max_tokens = model, max_tokens
+        self.tool, self.system = tool or TOOL, system or SYSTEM   # version 2 passes its own tool and system text
 
     def __call__(self, prompt: str) -> dict:
         # tool_choice "auto": newer models do not allow forcing a specific tool;
         # the prompt asks for the tool call, and plain-JSON text is accepted as a fallback.
         msg = self.client.messages.create(
             model=self.model, max_tokens=self.max_tokens,
-            system=SYSTEM, tools=[TOOL], tool_choice={"type": "auto"},
+            system=self.system, tools=[self.tool], tool_choice={"type": "auto"},
             messages=[{"role": "user", "content": prompt}],
         )
         block = next((b for b in msg.content if getattr(b, "type", "") == "tool_use"), None)

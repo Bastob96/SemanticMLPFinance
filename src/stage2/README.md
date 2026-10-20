@@ -34,3 +34,34 @@ python experiments/run_stage2_final_test.py --run results/stage2/runs/<run>   # 
 python -m pytest tests/test_stage2_formula.py
 ```
 Each run folder keeps every prompt, raw LLM response, the scoreboard, per-year scores and kept factors.
+
+## Version 2: testing factors together (Dr Liu, 20 Oct)
+Version 1 judges every factor alone. A factor that only helps in combination with another one is
+thrown away. Version 2 (`loop_v2.py`) keeps the same formula language, data split and models, and adds:
+1. **Report card** (`feedback.py`): for every factor tried, Claude sees its formula, the gain in each
+   year, the gain for Logistic Regression and Random Forest, its similarity to existing factors,
+   kept/promising/rejected with the reason, an automatic "why" line, and its own lesson from the
+   following round.
+2. **Team trial**: each factor is also added on top of the 22 factors plus the selected team. The best
+   one that helps the team in >= 3 of 4 years with an average gain >= the team bar joins (team max 6),
+   then the rest are re-tested on the bigger team.
+3. **Pair trial**: a few promising factors, preferably of different kinds (market, Apple-relative,
+   Apple-own), are tested two at a time. Both join if the pair helps in >= 3 of 4 years, reaches the
+   pair bar, and beats the better of the two alone by the extra-gain bar.
+4. **Promising list**: factors that are weak alone but show some sign of life are kept for later pairs
+   and get one more team trial at the end. Nothing is thrown away only for being weak alone.
+5. **Prompt** (`prompt_v2.py`): each round Claude writes a lesson for every factor of the last round
+   and proposes IMPROVE, NEW and PARTNER factors (a partner is designed to work with a promising or
+   selected factor), labelling each with a role.
+The team and pair bars are set with random-number factors before any real run
+(`experiments/calibrate_noise_v2.py` writes `results/stage2/rules_v2.json`).
+
+```
+python experiments/calibrate_noise_v2.py --n 48                       # once: sets the bars
+python experiments/run_stage2_loop_v2.py --rounds 8                    # new loop with Claude
+python experiments/run_stage2_loop_v2.py --proposer replay --replay results/stage2/runs/20261015_1635_claude
+python experiments/compare_stage2_runs.py A=<v1 run> B=<replay run> C=<v2 run>   # includes the one-time Q4 test
+python -m pytest tests/test_stage2_v2.py
+```
+Version 2 runs are saved in `results/stage2/runs_v2/` (prompts, replies, scoreboard with yearly
+results, pairs.csv, rounds.csv, the selected team in kept_factors.json).
