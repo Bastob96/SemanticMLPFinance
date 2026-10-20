@@ -9,7 +9,8 @@ Every round:
   4. Team trial: each factor added to the 22 factors plus the selected team; the best ones that
      clearly improve the team join it (best first, team stays small).
   5. Pair trials: a few promising factors, preferably of different kinds, are tested two at a time;
-     a pair that beats the better of its two members joins the team together.
+     a pair that does clearly better than its two members' gains added up joins the team together
+     (two lucky factors only add up their luck; real teamwork gives more than the sum).
   6. Factors that are weak alone but show some sign of life stay on the promising list.
   7. Everything is saved and goes back to Claude in the next round.
 At the end, the promising list gets one more team trial against the final team.
@@ -28,7 +29,7 @@ import numpy as np
 import pandas as pd
 
 from .context import BASE_FORMULAS, market_summary, stage1_importance
-from .feedback import lab_notebook
+from .feedback import board_records, lab_notebook
 from .formula import FormulaError, evaluate, validate
 from .llm import RandomProposer, dump
 from .prompt_v2 import build_prompt_v2
@@ -200,7 +201,7 @@ class LoopV2:
             if self.team:                                  # keep each member's team result up to date
                 self._write_team(self.rec(a), ra)
                 self._write_team(self.rec(b), rb)
-            synergy = res["gain"] - max(ra["gain"], rb["gain"])
+            synergy = res["gain"] - (ra["gain"] + rb["gain"])    # extra over the two gains added up
             room = len(self.team) + 2 <= self.rules.team_size
             not_copies = all(self.similarity(x)[0] < self.rules.max_corr for x in (a, b))   # vs the current team
             joined = (passes(res, self.rules, self.rules.pair_gain) and synergy >= self.rules.pair_synergy
@@ -223,7 +224,7 @@ class LoopV2:
                     self.team.append(x)
                     rx["status"], rx["how_selected"] = "kept", f"pair trial with {y}, round {round_no}"
                     rx["reason"] = (f"joined the team as a pair with {y}: pair gain {res['gain']:+.3f}, helped "
-                                    f"{res['years']}/4 years, {synergy:+.3f} more than the better one alone")
+                                    f"{res['years']}/4 years, {synergy:+.3f} more than the two alone added up")
 
     # ---------------- statuses ----------------
     def _set_status(self, r):
@@ -275,8 +276,9 @@ class LoopV2:
         for p in self.pairs[-limit:]:
             years = ", ".join(f"{y} {p.get(f'gain_{y}', float('nan')):+.3f}" for y in (2022, 2023, 2024, 2025))
             lines.append(f"- R{p['round']}: {p['a']} [{p['group_a']}] + {p['b']} [{p['group_b']}]: pair {p['gain']:+.3f} "
-                         f"({years}; {p['years']}/4 years; LR {p['lr']:+.3f}, RF {p['rf']:+.3f}); better one alone "
-                         f"{max(p['a_alone_on_team'], p['b_alone_on_team']):+.3f}, extra from pairing {p['synergy']:+.3f} -> "
+                         f"({years}; {p['years']}/4 years; LR {p['lr']:+.3f}, RF {p['rf']:+.3f}); alone on the team "
+                         f"{p['a_alone_on_team']:+.3f} and {p['b_alone_on_team']:+.3f}, extra over the two added up "
+                         f"{p['synergy']:+.3f} -> "
                          f"{'JOINED the team' if p['joined'] else 'not joined'}")
         return "\n".join(lines)
 
@@ -357,16 +359,7 @@ class LoopV2:
     # ---------------- saving and continuing ----------------
     def load_state(self) -> int:
         """Continue a stopped run from its saved files. Returns the next round number."""
-        board = pd.read_csv(self.out_dir / "scoreboard.csv")
-        text = ["name", "mode", "parent", "role", "formula", "hypothesis", "status", "reason", "lesson",
-                "how_selected", "group", "closest", "best_pair_partner"]
-        whole = ["round", "years_helped", "team_size", "team_years_helped", "best_pair_years"]
-        self.board = []
-        for r in board.to_dict("records"):
-            r = {k: v for k, v in r.items() if not (isinstance(v, float) and np.isnan(v))}
-            r.update({k: str(r.get(k, "")) for k in text})
-            r.update({k: int(r[k]) for k in whole if k in r})
-            self.board.append(r)
+        self.board = board_records(pd.read_csv(self.out_dir / "scoreboard.csv"))
         for r in self.board:
             if r["status"] == "invalid":
                 continue

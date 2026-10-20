@@ -70,8 +70,9 @@ def rules_text(rules) -> str:
             f"{rules['min_years']} of 4 years, the average gain is at least {rules['team_gain']:.3f}, and its similarity "
             f"to every existing and selected factor is below {rules['max_corr']:.2f}. The team holds at most {rules['team_size']} factors.\n"
             f"A PAIR joins the team together if the two factors added together help in at least {rules['min_years']} of 4 years, "
-            f"the pair's average gain is at least {rules['pair_gain']:.3f}, and the pair beats the better of the two alone by at least "
-            f"{rules['pair_synergy']:.3f}.\n"
+            f"the pair's average gain is at least {rules['pair_gain']:.3f}, and the pair's gain is at least "
+            f"{rules['pair_synergy']:.3f} more than the two factors' gains (each on top of the team) added up. Two factors "
+            f"that each got lucky simply add up their luck; real teamwork gives more than the sum.\n"
             f"A factor that is weak alone but shows some sign of life (helped in 2+ years, or helped one model) stays on the "
             f"PROMISING list and can still join the team later in a pair. Nothing is rejected only for being weak alone.\n"
             f"For reference, factors made of pure random numbers rarely pass these bars; small gains are noise.")

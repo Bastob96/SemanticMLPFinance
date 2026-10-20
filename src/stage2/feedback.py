@@ -19,6 +19,9 @@ from __future__ import annotations
 import math
 
 YEARS = (2022, 2023, 2024, 2025)
+TEXT_FIELDS = ("name", "mode", "parent", "role", "formula", "hypothesis", "status", "reason", "lesson",
+               "how_selected", "group", "closest", "best_pair_partner")
+WHOLE_FIELDS = ("round", "years_helped", "team_size", "team_years_helped", "best_pair_years")
 
 
 def _num(x):
@@ -27,6 +30,17 @@ def _num(x):
     except (TypeError, ValueError):
         return None
     return None if math.isnan(x) else x
+
+
+def board_records(board) -> list:
+    """Rows of a saved scoreboard.csv (a pandas table) as the records used for the report cards and the loop."""
+    out = []
+    for r in board.to_dict("records"):
+        r = {k: v for k, v in r.items() if not (isinstance(v, float) and math.isnan(v))}
+        r.update({k: str(r.get(k, "")) for k in TEXT_FIELDS})
+        r.update({k: int(r[k]) for k in WHOLE_FIELDS if k in r})
+        out.append(r)
+    return out
 
 
 def year_gains(rec) -> dict:
@@ -96,7 +110,7 @@ def why_line(rec, min_gain: float = 0.01) -> str:
         syn = _num(rec.get("best_pair_synergy"))
         if pg is not None and syn is not None and syn > 0:
             parts.append(f"worked better together with {rec['best_pair_partner']} "
-                         f"(pair {pg:+.3f}, {syn:+.3f} more than the better one alone)")
+                         f"(pair {pg:+.3f}, {syn:+.3f} more than the two alone added up)")
     return "; ".join(parts)
 
 
@@ -123,13 +137,14 @@ def report_card(rec, min_gain: float = 0.01) -> str:
         lines.append(perf)
         team = _num(rec.get("team_gain"))
         if team is not None and rec.get("team_size", 0):
-            lines.append(f"  on top of the selected team ({rec['team_size']} factors): avg {team:+.3f}, "
+            size = rec["team_size"]
+            lines.append(f"  on top of the selected team ({size} factor{'' if size == 1 else 's'}): avg {team:+.3f}, "
                          f"helped {rec.get('team_years_helped', 0)}/4 years")
         if rec.get("best_pair_partner"):
             syn = _num(rec.get("best_pair_synergy"))
             lines.append(f"  best pair: with {rec['best_pair_partner']}: avg {_num(rec.get('best_pair_gain')):+.3f}, "
                          f"helped {rec.get('best_pair_years', 0)}/4 years"
-                         + (f", {syn:+.3f} compared with the better one alone" if syn is not None else ""))
+                         + (f", {syn:+.3f} compared with the two alone added up" if syn is not None else ""))
     lines.append(f"  why: {why_line(rec, min_gain)}")
     if rec.get("lesson"):
         lines.append(f"  your lesson: {rec['lesson']}")

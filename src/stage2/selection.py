@@ -5,7 +5,8 @@ Plain-language summary:
   - Team trial: the factor is added to the 22 factors plus the selected team.
     It joins the team if the team gets clearly better, consistently across years.
   - Pair trial: two promising factors, preferably of different kinds, are added together.
-    Both join the team if together they beat the better one alone, consistently.
+    Both join the team if together they do clearly better than their two gains added up, consistently
+    (two lucky factors only add up their luck; real teamwork gives more than the sum).
   - Promising list: factors that are weak alone but show some sign of life are not thrown away.
 """
 
@@ -23,7 +24,7 @@ class Rules:
     min_years: int = 3            # must help in at least 3 of the 4 years
     team_gain: float = 0.01       # team trial: average gain needed (set from the random-number check)
     pair_gain: float = 0.015      # pair trial: average gain of the pair needed
-    pair_synergy: float = 0.005   # pair must beat the better of its two members alone by this much
+    pair_synergy: float = 0.005   # pair gain must exceed the two members' gains added up by this much
     max_corr: float = 0.9         # anything this similar to an existing or selected factor is a copy
     pair_max_corr: float = 0.7    # the two members of a pair should be different from each other
     team_size: int = 6            # the selected team stays small

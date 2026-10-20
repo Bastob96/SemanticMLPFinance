@@ -47,7 +47,8 @@ thrown away. Version 2 (`loop_v2.py`) keeps the same formula language, data spli
    then the rest are re-tested on the bigger team.
 3. **Pair trial**: a few promising factors, preferably of different kinds (market, Apple-relative,
    Apple-own), are tested two at a time. Both join if the pair helps in >= 3 of 4 years, reaches the
-   pair bar, and beats the better of the two alone by the extra-gain bar.
+   pair bar, and its gain is above the two members' gains added up by the extra-gain bar (two lucky
+   factors only add up their luck, so "better than the better one alone" lets noise in; see the noise check).
 4. **Promising list**: factors that are weak alone but show some sign of life are kept for later pairs
    and get one more team trial at the end. Nothing is thrown away only for being weak alone.
 5. **Prompt** (`prompt_v2.py`): each round Claude writes a lesson for every factor of the last round
