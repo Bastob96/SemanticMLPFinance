@@ -66,6 +66,10 @@ Write formulas only with the operators and inputs listed."""
 
 
 def rules_text(rules) -> str:
+    if len(rules.get("checks", ["q3"])) > 1:      # 8 checks: Q2 (trained on Q1) and Q3 (trained on Q1-Q2) each year
+        text = rules_text({**rules, "checks": ["q3"]}).replace("of 4 years", "of 8 checks")
+        return text + ("\nEach factor is checked twice per year: on Q2 after training on Q1, and on Q3 after training "
+                       "on Q1-Q2, so there are 8 checks. Yearly results shown are the Q3 checks.")
     return (f"A factor joins the SELECTED TEAM if, on top of the 22 factors and the current team, it helps in at least "
             f"{rules['min_years']} of 4 years, the average gain is at least {rules['team_gain']:.3f}, and its similarity "
             f"to every existing and selected factor is below {rules['max_corr']:.2f}. The team holds at most {rules['team_size']} factors.\n"

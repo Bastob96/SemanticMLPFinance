@@ -50,6 +50,7 @@ if __name__ == "__main__":
                     help="give the promising list one more team trial at the end (off: lets random numbers in, see calibrate_noise_v2.py)")
     ap.add_argument("--out", type=Path)
     ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--rules", type=Path, default=RULES_FILE, help="bars to use (default results/stage2/rules_v2.json)")
     args = ap.parse_args()
 
     if args.proposer == "claude":
@@ -59,7 +60,9 @@ if __name__ == "__main__":
         args.rounds = len(list(Path(args.replay).glob("round_*_response.json")))
     else:
         proposer = TemplateProposerV2(args.seed, args.improve, args.new, args.partner)
-    rules = Rules(**json.loads(RULES_FILE.read_text())) if RULES_FILE.exists() else Rules()
+    rules_file = args.rules
+    rules = Rules(**{**json.loads(rules_file.read_text()), "checks": tuple(json.loads(rules_file.read_text()).get("checks", ["q3"]))}) \
+        if rules_file.exists() else Rules()
 
     tag = args.proposer if args.proposer != "replay" else f"replay_{Path(args.replay).name}"
     out = args.out or ROOT / "results/stage2/runs_v2" / f"{datetime.now():%Y%m%d_%H%M}_{tag}"

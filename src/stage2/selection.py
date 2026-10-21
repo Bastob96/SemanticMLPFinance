@@ -30,6 +30,7 @@ class Rules:
     team_size: int = 6            # the selected team stays small
     pairs_per_round: int = 6      # pair trials per round (keeps the number of "lottery tickets" low)
     curve: bool = False           # grade alone/team results on a curve (src/stage2/curve.py); pairs stay raw
+    checks: tuple = ("q3",)       # ("q2", "q3"): check on Q2 (trained on Q1) as well as Q3 -> 8 checks; min_years counts checks
 
     def as_dict(self):
         return asdict(self)
@@ -39,13 +40,16 @@ def summarise_result(per_year: pd.DataFrame) -> dict:
     """Turn the per-year table from Scorer.gains into a few numbers."""
     if per_year.empty or not per_year["valid"].astype(bool).all():
         return {"valid": False}
-    g = per_year.set_index("year")
+    g = per_year if "check" in per_year else per_year.assign(check="q3")
+    q3 = g[g["check"] == "q3"].set_index("year")
     return {"valid": True,
             "gain": float(g["auc_gain"].mean()),
-            "years": int((g["auc_gain"] > 0).sum()),
+            "years": int((g["auc_gain"] > 0).sum()),          # checks helped (4 checks = years; 8 with Q2 too)
+            "n_checks": int(len(g)),
             "lr": float(g["auc_gain_lr"].mean()),
             "rf": float(g["auc_gain_rf"].mean()),
-            "by_year": {int(y): float(v) for y, v in g["auc_gain"].items()}}
+            "by_year": {int(y): float(v) for y, v in q3["auc_gain"].items()},
+            "by_check": {f"{int(y)}{c}": float(v) for y, c, v in zip(g["year"], g["check"], g["auc_gain"])}}
 
 
 def group_of(formula: str, role: str | None = None) -> str:
@@ -76,7 +80,7 @@ def is_promising(rec: dict, rules: Rules) -> bool:
         return False
     best_gain = max(rec.get("auc_gain", -1), rec.get("team_gain", -1) if rec.get("team_size") else -1)
     best_years = max(rec.get("years_helped", 0), rec.get("team_years_helped", 0) if rec.get("team_size") else 0)
-    return best_gain > 0 and best_years >= 2
+    return best_gain > 0 and best_years >= 2 * len(rules.checks)     # helped in at least half the checks
 
 
 def choose_pairs(new_names, pool_names, info, corr, rules: Rules, forced=()):

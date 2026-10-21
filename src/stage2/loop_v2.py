@@ -64,7 +64,7 @@ class LoopV2:
     def __post_init__(self):
         self.out_dir = Path(self.out_dir)
         self.out_dir.mkdir(parents=True, exist_ok=True)
-        self.scorer = Scorer(self.features)
+        self.scorer = Scorer(self.features, checks=tuple(self.rules.checks))
         self.market = market_summary(self.prices)
         self.stage1_top = stage1_importance(self.stage1_importance_path)
         dates = pd.to_datetime(self.features["Date"])
