@@ -1,0 +1,10 @@
+[
+  {
+    "name": "random_665013",
+    "formula": "rolling_mean(multiply(sign(pct_change(AAPL_Close, 1)), zscore(AAPL_Volume, 5)), 2)",
+    "hypothesis": "random baseline",
+    "round": 5,
+    "auc_gain": 0.010800477140790445,
+    "years_helped": 3
+  }
+]

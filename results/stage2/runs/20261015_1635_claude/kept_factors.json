@@ -1,0 +1,10 @@
+[
+  {
+    "name": "nvda_range_vs_aapl_range",
+    "formula": "subtract(safe_divide(subtract(NVDA_High, NVDA_Low), NVDA_Close), safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close))",
+    "hypothesis": "Relative intraday turbulence in NVDA versus AAPL captures sector stress that AAPL has yet to absorb.",
+    "round": 4,
+    "auc_gain": 0.012304897255344834,
+    "years_helped": 3
+  }
+]

@@ -19,3 +19,6 @@ __all__ = [
     "load_integrated_splits",
     "select_primary_configuration",
 ]
+from .scoring import Scorer, summarise
+
+__all__ = ["Scorer", "summarise"]

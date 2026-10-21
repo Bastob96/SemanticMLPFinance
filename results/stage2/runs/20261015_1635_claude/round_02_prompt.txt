@@ -1,0 +1,96 @@
+ROUND 2
+
+GOAL
+Predict whether AAPL closes higher tomorrow than today (binary). A factor is computed after the close of day t.
+
+DATA (daily, adjusted OHLCV, Sept 2021 - Dec 2025)
+Inputs: AAPL_Open, AAPL_High, AAPL_Low, AAPL_Close, AAPL_Volume, QQQ_Open, QQQ_High, QQQ_Low, QQQ_Close, QQQ_Volume, MSFT_Open, MSFT_High, MSFT_Low, MSFT_Close, MSFT_Volume, NVDA_Open, NVDA_High, NVDA_Low, NVDA_Close, NVDA_Volume
+Market summary up to 30 June 2025:
+- AAPL: 2021: +17% (daily vol 1.5%), 2022: -28% (daily vol 2.2%), 2023: +55% (daily vol 1.3%), 2024: +36% (daily vol 1.4%), 2025: -16% (daily vol 2.6%)
+- QQQ: 2021: +5% (daily vol 1.1%), 2022: -33% (daily vol 2.0%), 2023: +56% (daily vol 1.1%), 2024: +28% (daily vol 1.1%), 2025: +8% (daily vol 1.9%); daily-return correlation with AAPL 0.79
+- MSFT: 2021: +12% (daily vol 1.4%), 2022: -28% (daily vol 2.2%), 2023: +58% (daily vol 1.6%), 2024: +15% (daily vol 1.3%), 2025: +19% (daily vol 1.9%); daily-return correlation with AAPL 0.66
+- NVDA: 2021: +31% (daily vol 3.2%), 2022: -51% (daily vol 4.0%), 2023: +246% (daily vol 3.1%), 2024: +179% (daily vol 3.3%), 2025: +14% (daily vol 4.0%); daily-return correlation with AAPL 0.54
+
+HOW EACH FACTOR IS SCORED
+For each year 2022, 2023, 2024 and 2025: train on Q1-Q2, score on Q3 (validation).
+The factor is added to the 22 existing factors below; Logistic Regression and Random Forest are refitted.
+- auc_gain: validation ROC AUC with the factor minus without it (averaged over the models and years)
+- years_helped: in how many of the 4 years auc_gain > 0
+- importance: drop in validation AUC when the factor is shuffled
+- max_corr: largest |Spearman correlation| with any existing or already kept factor
+A factor is KEPT only if years_helped >= 3, mean auc_gain >= 0.01 and max_corr < 0.9.
+For reference, pure random noise gets mean auc_gain around -0.002 (std 0.008), so small gains are noise.
+Single-quarter AUC is noisy: consistency across years matters as much as size.
+
+THE 22 EXISTING FACTORS (do not repeat them)
+- AAPL_return_1d = pct_change(AAPL_Close, 1)
+- AAPL_mean_return_3d = rolling_mean(pct_change(AAPL_Close, 1), 3)
+- AAPL_mean_return_5d = rolling_mean(pct_change(AAPL_Close, 1), 5)
+- AAPL_mean_return_10d = rolling_mean(pct_change(AAPL_Close, 1), 10)
+- AAPL_mean_return_20d = rolling_mean(pct_change(AAPL_Close, 1), 20)
+- AAPL_cum_return_5d = pct_change(AAPL_Close, 5)
+- AAPL_cum_return_10d = pct_change(AAPL_Close, 10)
+- AAPL_cum_return_20d = pct_change(AAPL_Close, 20)
+- AAPL_volatility_5d = rolling_std(pct_change(AAPL_Close, 1), 5)
+- AAPL_volatility_10d = rolling_std(pct_change(AAPL_Close, 1), 10)
+- AAPL_volatility_20d = rolling_std(pct_change(AAPL_Close, 1), 20)
+- AAPL_close_to_ma20 = subtract(safe_divide(AAPL_Close, rolling_mean(AAPL_Close, 20)), 1)
+- AAPL_volume_to_ma20 = subtract(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20)), 1)
+- AAPL_daily_range = safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close)
+- QQQ_return_1d = pct_change(QQQ_Close, 1)
+- QQQ_cum_return_5d = pct_change(QQQ_Close, 5)
+- MSFT_return_1d = pct_change(MSFT_Close, 1)
+- MSFT_cum_return_5d = pct_change(MSFT_Close, 5)
+- NVDA_return_1d = pct_change(NVDA_Close, 1)
+- NVDA_cum_return_5d = pct_change(NVDA_Close, 5)
+- AAPL_minus_QQQ_1d = subtract(pct_change(AAPL_Close, 1), pct_change(QQQ_Close, 1))
+- AAPL_minus_peer_mean_1d = subtract(pct_change(AAPL_Close, 1), multiply(add(pct_change(MSFT_Close, 1), pct_change(NVDA_Close, 1)), 0.5))
+
+MOST USEFUL EXISTING FACTORS IN STAGE 1
+- AAPL_volatility_10d: mean AUC drop when shuffled +0.0125
+- MSFT_return_1d: mean AUC drop when shuffled +0.0114
+- NVDA_cum_return_5d: mean AUC drop when shuffled +0.0070
+- AAPL_volatility_20d: mean AUC drop when shuffled +0.0067
+- AAPL_cum_return_20d: mean AUC drop when shuffled +0.0066
+- AAPL_mean_return_20d: mean AUC drop when shuffled +0.0060
+
+FACTORS KEPT SO FAR
+(none yet)
+
+SCOREBOARD OF EVERYTHING TRIED SO FAR
+round | name | mode | auc_gain | years_helped | importance | max_corr (with) | status | formula
+1 | msft_return_zscore_20 | variant | +0.0011 | 3/4 | +0.0153 | 0.95 (MSFT_return_1d) | rejected - mean auc_gain below 0.01; near-copy of MSFT_return_1d | zscore(pct_change(MSFT_Close, 1), 20)
+1 | close_position_in_range | new | +0.0007 | 2/4 | +0.0025 | 0.68 (AAPL_return_1d) | rejected - helped only 2/4 years; mean auc_gain below 0.01 | safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low))
+1 | overnight_gap | new | -0.0005 | 2/4 | +0.0012 | 0.48 (AAPL_return_1d) | rejected - helped only 2/4 years; mean auc_gain below 0.01 | subtract(safe_divide(AAPL_Open, lag(AAPL_Close, 1)), 1)
+1 | vol_ratio_5_20 | variant | -0.0029 | 2/4 | -0.0020 | 0.77 (AAPL_volatility_5d) | rejected - helped only 2/4 years; mean auc_gain below 0.01 | safe_divide(rolling_std(pct_change(AAPL_Close, 1), 5), rolling_std(pct_change(AAPL_Close, 1), 20))
+1 | aapl_cum20_vol_adj | variant | -0.0057 | 2/4 | -0.0016 | 0.97 (AAPL_mean_return_20d) | rejected - helped only 2/4 years; mean auc_gain below 0.01; near-copy of AAPL_mean_return_20d | safe_divide(pct_change(AAPL_Close, 20), rolling_std(pct_change(AAPL_Close, 1), 20))
+1 | volume_price_agreement | new | -0.0132 | 1/4 | -0.0132 | 0.23 (AAPL_mean_return_3d) | rejected - helped only 1/4 years; mean auc_gain below 0.01 | multiply(sign(pct_change(AAPL_Close, 1)), pct_change(AAPL_Volume, 1))
+
+FORMULA LANGUAGE
+Nested function calls only, no + - * / symbols. Windows n must be one of (1, 2, 3, 5, 10, 20, 60).
+- pct_change(x, n): x(t) / x(t-n) - 1
+- lag(x, n): x(t-n)
+- diff(x, n): x(t) - x(t-n)
+- rolling_mean(x, n): mean of the last n values, ending at t
+- rolling_std(x, n): sample std (ddof=1) of the last n values, ending at t (n >= 2)
+- rolling_min(x, n): min of the last n values, ending at t
+- rolling_max(x, n): max of the last n values, ending at t
+- rolling_sum(x, n): sum of the last n values, ending at t
+- zscore(x, n): (x(t) - rolling_mean(x, n)) / rolling_std(x, n) (n >= 2)
+- add(a, b): a + b
+- subtract(a, b): a - b
+- multiply(a, b): a * b
+- safe_divide(a, b): a / b, missing when |b| < 1e-12
+- abs(x): |x|
+- sign(x): -1, 0 or +1
+- log(x): natural log, missing when x <= 0
+Example: safe_divide(rolling_std(pct_change(AAPL_Close, 1), 5), rolling_std(pct_change(QQQ_Close, 1), 20))
+
+TASK
+Propose 3 VARIANT factors and 3 NEW factors.
+- VARIANT: change a factor that scored well (from the scoreboard or the useful Stage 1 factors) to make it
+  stronger or more stable, e.g. a different window, normalisation, a peer or market comparison. Name the parent.
+- NEW: a genuinely different idea from everything above (a different family, e.g. intraday position,
+  gaps, volume-price agreement, cross-stock lead-lag, regime or volatility interaction). Parent is empty.
+Do not resubmit any formula on the scoreboard.
+Answer ONLY by calling the tool propose_factors (no other text).
