@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-10-15T09:45:30.555584+00:00",
+  "year": 2025,
+  "profile": "quarterly",
+  "split_policy": "Q1-Q2 train, Q3 validation, Q4 test; boundary labels purged",
+  "selection": {
+    "experiment": "B_stage1",
+    "model": "logistic_regression",
+    "seed": 42,
+    "selection_split": "validation",
+    "selection_metric": "balanced_accuracy_mean",
+    "selection_score": 0.5757575757575758,
+    "eligible_experiments": [
+      "baseline",
+      "A_stage1",
+      "B_stage1",
+      "B_stage2",
+      "C_stage1",
+      "C_stage2"
+    ]
+  },
+  "primary_experiments": {
+    "A_stage1": [
+      "AAPL_return_1d",
+      "AAPL_mean_return_3d",
+      "AAPL_mean_return_5d",
+      "AAPL_mean_return_10d",
+      "AAPL_mean_return_20d",
+      "AAPL_cum_return_5d",
+      "AAPL_cum_return_10d",
+      "AAPL_cum_return_20d",
+      "AAPL_volatility_5d",
+      "AAPL_volatility_10d",
+      "AAPL_volatility_20d",
+      "AAPL_close_to_ma20",
+      "AAPL_volume_to_ma20",
+      "AAPL_daily_range"
+    ],
+    "B_stage1": [
+      "AAPL_return_1d",
+      "AAPL_mean_return_3d",
+      "AAPL_mean_return_5d",
+      "AAPL_mean_return_10d",
+      "AAPL_mean_return_20d",
+      "AAPL_cum_return_5d",
+      "AAPL_cum_return_10d",
+      "AAPL_cum_return_20d",
+      "AAPL_volatility_5d",
+      "AAPL_volatility_10d",
+      "AAPL_volatility_20d",
+      "AAPL_close_to_ma20",
+      "AAPL_volume_to_ma20",
+      "AAPL_daily_range",
+      "QQQ_return_1d",
+      "QQQ_cum_return_5d",
+      "AAPL_minus_QQQ_1d"
+    ],
+    "B_stage2": [
+      "AAPL_return_1d",
+      "AAPL_mean_return_3d",
+      "AAPL_mean_return_5d",
+      "AAPL_mean_return_10d",
+      "AAPL_mean_return_20d",
+      "AAPL_cum_return_5d",
+      "AAPL_cum_return_10d",
+      "AAPL_cum_return_20d",
+      "AAPL_volatility_5d",
+      "AAPL_volatility_10d",
+      "AAPL_volatility_20d",
+      "AAPL_close_to_ma20",
+      "AAPL_volume_to_ma20",
+      "AAPL_daily_range",
+      "QQQ_return_1d",
+      "QQQ_cum_return_5d",
+      "AAPL_minus_QQQ_1d",
+      "aapl_to_qqq_relative_realized_risk",
+      "relative_return_market_risk_interaction",
+      "aapl_to_qqq_normalized_range_ratio",
+      "lagged_qqq_relative_momentum"
+    ],
+    "C_stage1": [
+      "AAPL_return_1d",
+      "AAPL_mean_return_3d",
+      "AAPL_mean_return_5d",
+      "AAPL_mean_return_10d",
+      "AAPL_mean_return_20d",
+      "AAPL_cum_return_5d",
+      "AAPL_cum_return_10d",
+      "AAPL_cum_return_20d",
+      "AAPL_volatility_5d",
+      "AAPL_volatility_10d",
+      "AAPL_volatility_20d",
+      "AAPL_close_to_ma20",
+      "AAPL_volume_to_ma20",
+      "AAPL_daily_range",
+      "QQQ_return_1d",
+      "QQQ_cum_return_5d",
+      "MSFT_return_1d",
+      "MSFT_cum_return_5d",
+      "NVDA_return_1d",
+      "NVDA_cum_return_5d",
+      "AAPL_minus_QQQ_1d",
+      "AAPL_minus_peer_mean_1d"
+    ],
+    "C_stage2": [
+      "AAPL_return_1d",
+      "AAPL_mean_return_3d",
+      "AAPL_mean_return_5d",
+      "AAPL_mean_return_10d",
+      "AAPL_mean_return_20d",
+      "AAPL_cum_return_5d",
+      "AAPL_cum_return_10d",
+      "AAPL_cum_return_20d",
+      "AAPL_volatility_5d",
+      "AAPL_volatility_10d",
+      "AAPL_volatility_20d",
+      "AAPL_close_to_ma20",
+      "AAPL_volume_to_ma20",
+      "AAPL_daily_range",
+      "QQQ_return_1d",
+      "QQQ_cum_return_5d",
+      "MSFT_return_1d",
+      "MSFT_cum_return_5d",
+      "NVDA_return_1d",
+      "NVDA_cum_return_5d",
+      "AAPL_minus_QQQ_1d",
+      "AAPL_minus_peer_mean_1d",
+      "peer_signed_return_confirmation",
+      "peer_return_dispersion",
+      "aapl_peer_consensus_relative_return",
+      "aapl_to_qqq_relative_realized_risk",
+      "peer_volume_confirmed_aapl_return",
+      "relative_return_market_risk_interaction",
+      "aapl_to_qqq_normalized_range_ratio",
+      "lagged_qqq_relative_momentum"
+    ]
+  },
+  "model_configuration": {
+    "logistic_regression": {
+      "seed": 42,
+      "C": 1.0,
+      "max_iter": 2000,
+      "threshold": 0.5
+    },
+    "random_forest": {
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "n_estimators": 300,
+      "max_depth": 5,
+      "min_samples_leaf": 5,
+      "class_weight": "balanced",
+      "threshold": 0.5
+    }
+  },
+  "canonical_data": {
+    "status": "shared_canonical",
+    "sources": {
+      "five_year": {
+        "path": "data/processed/aligned_daily_ohlcv_5y.csv",
+        "sha256": "5972891e0f4859bccc5dfc31f600dbca026e7f25c52785f02e6846e3db7a07a7",
+        "rows": 5012,
+        "trading_dates": 1253
+      },
+      "split_2025": {
+        "path": "data/processed/aligned_daily_ohlcv_2025_split.csv",
+        "sha256": "0bdac629836926a2807a77f1d01705f5862cf48156b9f7a9b7f5fe34de716287",
+        "rows": 1000,
+        "trading_dates": 250
+      }
+    },
+    "stage2_profile": {
+      "name": "quarterly",
+      "path": "Stage2_Factor_Files/data/processed/quarterly",
+      "usable_split_counts": {
+        "train": 121,
+        "validation": 63,
+        "test": 63
+      }
+    }
+  },
+  "source_sha256": {
+    "data/processed/aligned_daily_ohlcv_5y.csv": "5972891e0f4859bccc5dfc31f600dbca026e7f25c52785f02e6846e3db7a07a7",
+    "Stage2_Factor_Files/configs/feature_sets.json": "146799efc286a0457483ea5cadf22ead627cfdf56a44593f7252902f3027d333",
+    "Stage2_Factor_Files/data/processed/quarterly/stage2_train_2025.csv": "89e3f5a17224206fb9579c4349f0ea77c4b3b54d392e7c827118dbf0bba6a9e1",
+    "Stage2_Factor_Files/data/processed/quarterly/stage2_validation_2025.csv": "3721e2cdd0ad54906fecb4e65deeecba14d9d08ada3b5eb2b4ed1e102f07b8ac"
+  },
+  "validation_predictions_sha256": "0a5f8800c5bce422522ee18b32180b4db5b3ad22d7725dac3ed5186a38358d4d",
+  "test_status": "locked_not_evaluated"
+}

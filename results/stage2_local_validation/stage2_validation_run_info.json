@@ -1,0 +1,12 @@
+{
+  "phase": "validation",
+  "test_evaluated": false,
+  "split_rows": {
+    "train": 121,
+    "validation": 63
+  },
+  "python": "3.11.16",
+  "pandas": "2.2.2",
+  "numpy": "2.4.6",
+  "scikit_learn": "1.9.0"
+}

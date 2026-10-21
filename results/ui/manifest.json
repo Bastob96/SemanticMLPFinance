@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "source_commit": "80d3021b731297c009fcbe02414f3046df4a5780",
+  "canonical_data": "data/processed/aligned_daily_ohlcv_5y.csv",
+  "canonical_data_sha256": "5972891e0f4859bccc5dfc31f600dbca026e7f25c52785f02e6846e3db7a07a7",
+  "export_environment": {
+    "numpy": "2.3.5",
+    "pandas": "2.2.3",
+    "scikit-learn": "1.8.0"
+  },
+  "prediction_target": "AAPL next-trading-day direction",
+  "stage1": {
+    "years": [
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "comparison": "stage1_comparison.csv",
+    "backtest_summary": "stage1_backtest_summary.csv",
+    "backtest_daily": "stage1_backtest_daily.csv",
+    "backtest_selection": "stage1_backtest_selection.json",
+    "importance": "../multi_year/permutation_importance_summary.csv"
+  },
+  "stage2": {
+    "scoreboard": "stage2_scoreboard.csv",
+    "scores_by_year": "stage2_scores_by_year.csv",
+    "final_metrics": "stage2_final_metrics.csv",
+    "final_equity": "stage2_final_equity.csv",
+    "noise_null": "stage2_noise_null.csv",
+    "runs": {
+      "claude": "20261015_1635_claude",
+      "random": "20261015_1645_random"
+    },
+    "selection_rule": {
+      "minimum_years_helped": 3,
+      "minimum_mean_auc_gain": 0.01,
+      "maximum_absolute_correlation": 0.9,
+      "selection_split": "Q3 validation only"
+    },
+    "test_status": "Frozen one-time Q4 reproduction; not used for tuning"
+  }
+}

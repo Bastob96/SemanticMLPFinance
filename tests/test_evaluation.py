@@ -126,6 +126,17 @@ class EvaluationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             select_best_configuration(table.loc[table.split.eq('test')])
 
+    def test_stage2_experiment_names_use_the_existing_schema(self):
+        subset = self.saved.loc[
+            self.saved.experiment.eq('C') & self.saved.model.eq('logistic_regression')
+        ].copy()
+        subset['experiment'] = 'C_stage2'
+        loaded = load_predictions(subset)
+        self.assertTrue(loaded.experiment.eq('C_stage2').all())
+        subset['experiment'] = 'C Stage 2'
+        with self.assertRaisesRegex(ValueError, 'experiment'):
+            load_predictions(subset)
+
 
 if __name__ == '__main__':
     unittest.main()

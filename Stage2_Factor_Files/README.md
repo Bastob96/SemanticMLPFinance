@@ -68,9 +68,10 @@ python Stage2_Factor_Files/run.py --five-year "path/to/aligned_daily_ohlcv_5y.cs
 The default test command uses the two documented data directories. For a custom
 layout, `STAGE2_FIVE_YEAR` and `STAGE2_SPLIT_2025` can specify the test input files.
 
-## Output
+## Output profiles
 
-All outputs are under this folder's `data/processed/`:
+The supervisor-confirmed direction-classification outputs are under
+`data/processed/quarterly/`:
 
 | File                                   | Rows | Use                                                   |
 | -------------------------------------- | ---: | ----------------------------------------------------- |
@@ -111,6 +112,27 @@ target_next_day_up is y; Date, Quarter, Split and target_date are metadata.
 This accepted generated batch contains no AAPL-only Stage 2 candidate, so A has no new Stage 2 factors. B contains the AAPL/QQQ candidates, while C adds the MSFT/NVDA candidates.
 These are candidate additions, not a replacement for the Stage 1 baseline set.
 Do not count the same formula twice when merging feature sets.
+
+The separate `data/processed/split_70_15_15/` directory supports Taiyu's
+next-day return-regression experiment. It has a different target, feature set
+and date split. Do not mix its metrics or CSVs with the quarterly
+direction-classification experiment.
+
+## Quarterly model comparison
+
+The repository-level runner adds these factors to Kevin's existing Stage 1
+features and reuses the fixed Logistic Regression and Random Forest settings.
+The primary comparison is `C_stage1` (22 conventional features) against
+`C_stage2` (the same 22 plus all eight candidates).
+
+```text
+python experiments/run_stage2_training.py --phase validation
+python experiments/run_stage2_training.py --phase final --confirm-locked-test
+```
+
+The validation phase fits on Q1-Q2 and selects on Q3 without loading Q4. The
+final phase checks the locked data hashes and feature lists before evaluating
+Q4 once. Outputs and plain-language reports are saved in `results/stage2_2025/`.
 
 ## Checks and limits
 

@@ -1,0 +1,32 @@
+{
+  "year": 2025,
+  "primary_comparison": {
+    "control": "C_stage1: 22 conventional features",
+    "candidate": "C_stage2: the same 22 features plus 8 LLM factors"
+  },
+  "split": {
+    "train": [1, 2],
+    "validation": [3],
+    "test": [4],
+    "exclude_cross_partition_labels": true,
+    "test_locked_until_validation_selection": true
+  },
+  "selection": {
+    "split": "validation",
+    "primary_metric": "balanced_accuracy_mean"
+  },
+  "logistic_regression": {
+    "seed": 42,
+    "C": 1.0,
+    "max_iter": 2000,
+    "training_only_standardisation": true
+  },
+  "random_forest": {
+    "seeds": [0, 1, 2],
+    "n_estimators": 300,
+    "max_depth": 5,
+    "min_samples_leaf": 5,
+    "class_weight": "balanced"
+  },
+  "prediction_threshold": 0.5
+}
