@@ -39,7 +39,7 @@ if __name__ == "__main__":
     if not runs:
         v2 = sorted((ROOT / "results/stage2/runs_v2").glob("*"))
         replay = [r for r in v2 if "_replay_" in r.name]
-        claude = [r for r in v2 if r.name.endswith("_claude")]
+        claude = [r for r in v2 if r.name.endswith("_claude") and "_replay_" not in r.name]
         runs = [("A", ROOT / "results/stage2/runs/20261015_1635_claude")]
         runs += [("B", replay[-1])] if replay else []
         runs += [("C", claude[-1])] if claude else []

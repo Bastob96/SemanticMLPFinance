@@ -84,7 +84,7 @@ prices = wide_prices(raw)
 RUN_A = Path('results/stage2/runs/20261015_1635_claude')           # A: last week, every factor judged alone
 V2_RUNS = sorted(Path('results/stage2/runs_v2').glob('*'))
 RUN_B = [r for r in V2_RUNS if '_replay_' in r.name][-1]            # B: last week's 48 factors, judged the new way
-RUN_C = [r for r in V2_RUNS if r.name.endswith('_claude')][-1]      # C: the new loop with Claude
+RUN_C = [r for r in V2_RUNS if r.name.endswith('_claude') and '_replay_' not in r.name][-1]      # C: the new loop with Claude
 
 a_board = pd.read_csv(RUN_A / 'scoreboard.csv').fillna({'reason': '', 'closest': ''})
 a_kept = json.loads((RUN_A / 'kept_factors.json').read_text())
