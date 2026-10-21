@@ -1,0 +1,14 @@
+{
+  "min_years": 7,
+  "team_gain": 0.0075,
+  "pair_gain": 0.01,
+  "pair_synergy": 0.005,
+  "max_corr": 0.9,
+  "pair_max_corr": 0.7,
+  "team_size": 6,
+  "pairs_per_round": 6,
+  "checks": [
+    "q2",
+    "q3"
+  ]
+}
