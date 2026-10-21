@@ -3,3 +3,7 @@ yfinance==1.7.0
 requests==2.32.3
 numpy>=1.26,<3
 scikit-learn>=1.4,<2
+anthropic>=0.40
+pytest>=8
+streamlit>=1.55,<2
+plotly>=5.24,<7
