@@ -1,0 +1,54 @@
+{
+  "reflection": "replay of 20261015_1635_claude, round 5",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "msft_range_vs_aapl_range",
+      "mode": "improve",
+      "parent": "nvda_range_vs_aapl_range",
+      "formula": "subtract(safe_divide(subtract(MSFT_High, MSFT_Low), MSFT_Close), safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close))",
+      "hypothesis": "Relative intraday range of MSFT versus AAPL shows whether AAPL is calm relative to its peers, which signals a mean-reverting catch-up.",
+      "role": ""
+    },
+    {
+      "name": "nvda_range_vs_aapl_range_5d",
+      "mode": "improve",
+      "parent": "nvda_range_vs_aapl_range",
+      "formula": "rolling_mean(subtract(safe_divide(subtract(NVDA_High, NVDA_Low), NVDA_Close), safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close)), 5)",
+      "hypothesis": "Smoothing the kept range spread over 5 days gives a steadier read on the risk-appetite regime.",
+      "role": ""
+    },
+    {
+      "name": "nvda_range_vs_qqq_range_zscore",
+      "mode": "improve",
+      "parent": "nvda_range_vs_aapl_range",
+      "formula": "zscore(subtract(safe_divide(subtract(NVDA_High, NVDA_Low), NVDA_Close), safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close)), 20)",
+      "hypothesis": "NVDA range relative to the market range, standardised, measures speculative excess in tech and affects next-day AAPL direction.",
+      "role": ""
+    },
+    {
+      "name": "qqq_range_vs_aapl_range",
+      "mode": "new",
+      "parent": "",
+      "formula": "subtract(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close))",
+      "hypothesis": "When the market range is wide relative to AAPL's own range, AAPL is under-reacting and may catch up.",
+      "role": ""
+    },
+    {
+      "name": "aapl_range_zscore_60_proxy",
+      "mode": "new",
+      "parent": "",
+      "formula": "zscore(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 20)",
+      "hypothesis": "An unusually wide AAPL range compared with its recent norm signals stress and reversal.",
+      "role": ""
+    },
+    {
+      "name": "nvda_overnight_gap",
+      "mode": "new",
+      "parent": "",
+      "formula": "subtract(safe_divide(NVDA_Open, lag(NVDA_Close, 1)), 1)",
+      "hypothesis": "NVDA's overnight gap reflects news sentiment in tech that spills over into AAPL's next move.",
+      "role": ""
+    }
+  ]
+}

@@ -29,6 +29,7 @@ class Rules:
     pair_max_corr: float = 0.7    # the two members of a pair should be different from each other
     team_size: int = 6            # the selected team stays small
     pairs_per_round: int = 6      # pair trials per round (keeps the number of "lottery tickets" low)
+    curve: bool = False           # grade alone/team results on a curve (src/stage2/curve.py); pairs stay raw
 
     def as_dict(self):
         return asdict(self)

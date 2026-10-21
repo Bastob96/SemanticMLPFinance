@@ -35,6 +35,7 @@ from .formula import FormulaError, evaluate, validate
 from .llm import RandomProposer, dump
 from .prompt_v2 import build_prompt_v2
 from .scoring import BASE, Scorer
+from .curve import Curve
 from .selection import Rules, choose_pairs, group_of, is_promising, passes, summarise_result
 
 
@@ -70,6 +71,8 @@ class LoopV2:
         self.check_idx = pd.DatetimeIndex(dates[(dates.dt.year >= 2022) & (dates.dt.month <= 9)])   # Q1-Q3 only
         self.reference = self.features.set_index(pd.to_datetime(self.features["Date"]))[BASE]
         self.values, self.solo = {}, {}
+        self._py = {}            # (name, team) -> raw per-year table from the scorer
+        self.curve = Curve(self.scorer, self.prices) if self.rules.curve else None
         self._team_cache, self._corr_cache = {}, {}
 
     # ---------------- small helpers ----------------
@@ -96,15 +99,26 @@ class LoopV2:
             self._corr_cache[key] = float(xa.corr(xb, method="spearman"))
         return self._corr_cache[key]
 
-    def team_result(self, name):
-        """The factor added on top of the 22 factors plus the current team (cached per team)."""
-        key = (name, tuple(sorted(self.team)))
+    def per_year(self, name, team_names=None):
+        """Raw per-year table for the factor on top of the 22 factors plus a team (default: current team)."""
+        team_names = tuple(sorted(self.team if team_names is None else team_names))
+        key = (name, team_names)
+        if key not in self._py:
+            self._py[key] = self.scorer.gains({name: self.values[name]}, {n: self.values[n] for n in team_names})
+        return self._py[key]
+
+    def judged(self, per_year, team_names):
+        """Summary used for decisions: graded on the curve when the rules say so."""
+        if self.curve is None:
+            return summarise_result(per_year)
+        return summarise_result(self.curve.apply(per_year, {n: self.values[n] for n in team_names}))
+
+    def team_result(self, name, raw=False):
+        """The factor added on top of the 22 factors plus the current team (curved unless raw=True)."""
+        key = (name, tuple(sorted(self.team)), raw)
         if key not in self._team_cache:
-            if not self.team:
-                self._team_cache[key] = self.solo[name]          # with no team this is the solo test
-            else:
-                self._team_cache[key] = summarise_result(
-                    self.scorer.gains({name: self.values[name]}, self.team_values()))
+            py = self.per_year(name)
+            self._team_cache[key] = summarise_result(py) if raw else self.judged(py, self.team)
         return self._team_cache[key]
 
     # ---------------- one factor ----------------
@@ -196,12 +210,12 @@ class LoopV2:
             if a in self.team or b in self.team:
                 continue
             res = summarise_result(self.scorer.gains({a: self.values[a], b: self.values[b]}, self.team_values()))
-            ra, rb = self.team_result(a), self.team_result(b)
+            ra, rb = self.team_result(a, raw=True), self.team_result(b, raw=True)    # pairs are judged raw
             if not (res.get("valid") and ra.get("valid") and rb.get("valid")):
                 continue
             if self.team:                                  # keep each member's team result up to date
-                self._write_team(self.rec(a), ra)
-                self._write_team(self.rec(b), rb)
+                self._write_team(self.rec(a), self.team_result(a))
+                self._write_team(self.rec(b), self.team_result(b))
             synergy = res["gain"] - (ra["gain"] + rb["gain"])    # extra over the two gains added up
             room = len(self.team) + 2 <= self.rules.team_size
             not_copies = all(self.similarity(x)[0] < self.rules.max_corr for x in (a, b))   # vs the current team
@@ -313,12 +327,14 @@ class LoopV2:
             new.append(r)
         tested = [r for r in new if r["status"] == "tested"]
         for r in tested:                                          # 1. solo test
-            res = summarise_result(self.scorer.gains({r["name"]: self.values[r["name"]]}, {}))
+            res = self.judged(self.per_year(r["name"], ()), ())
             if not res["valid"]:
                 r["status"], r["reason"] = "invalid", "constant or missing in a training/validation quarter"
                 continue
             self.solo[r["name"]] = res
             self._write_solo(r, res)
+            if self.curve is not None:                            # keep the uncurved result too, for reporting
+                r["raw_gain"] = summarise_result(self.per_year(r["name"], ()))["gain"]
             r["max_corr"], r["closest"] = self.similarity(r["name"])
         tested = [r for r in tested if r["status"] == "tested"]
         team_before = len(self.team)

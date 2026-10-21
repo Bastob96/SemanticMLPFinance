@@ -1,0 +1,24 @@
+{
+  "rounds": 8,
+  "improve": 2,
+  "new": 2,
+  "partner": 2,
+  "proposer": "replay",
+  "replay": "results/stage2/runs/20261015_1635_claude",
+  "model": "claude-sonnet-5-5",
+  "seed": 0,
+  "final_check": false,
+  "out": "/Users/bastobsmacm2pro/Documents/SemanticMLPFinance/results/stage2/runs_v2/20261021_1110_replay_20261015_1635_claude",
+  "resume": false,
+  "rules": {
+    "min_years": 3,
+    "team_gain": 0.01,
+    "pair_gain": 0.01,
+    "pair_synergy": 0.01,
+    "max_corr": 0.9,
+    "pair_max_corr": 0.7,
+    "team_size": 6,
+    "pairs_per_round": 6
+  },
+  "started": "2026-10-21T11:10:42.876482"
+}

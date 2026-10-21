@@ -75,7 +75,12 @@ def rules_text(rules) -> str:
             f"that each got lucky simply add up their luck; real teamwork gives more than the sum.\n"
             f"A factor that is weak alone but shows some sign of life (helped in 2+ years, or helped one model) stays on the "
             f"PROMISING list and can still join the team later in a pair. Nothing is rejected only for being weak alone.\n"
-            f"For reference, factors made of pure random numbers rarely pass these bars; small gains are noise.")
+            f"For reference, factors made of pure random numbers rarely pass these bars; small gains are noise."
+            + ("\nGRADED ON A CURVE: every gain shown for a factor alone or on the team is its gain MINUS the typical "
+               "(median) gain of a fixed class of 24 template formulas (no LLM) in the same year and on the same team. "
+               "Each year's validation quarter reacts to almost any new factor in the same way (in 2024 nearly every "
+               "factor lowered the score, in 2023 nearly every factor raised it), so positive now means 'better than a "
+               "typical factor in that year'. Pair trials are not curved." if rules.get("curve") else ""))
 
 
 def build_prompt_v2(*, round_no, n_improve, n_new, n_partner, base_formulas, stage1_top, market,

@@ -1,0 +1,54 @@
+{
+  "reflection": "replay of 20261015_1635_claude, round 4",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "nvda_cum5_minus_aapl_cum5",
+      "mode": "improve",
+      "parent": "nvda_cum10_minus_aapl_cum10",
+      "formula": "subtract(pct_change(NVDA_Close, 5), pct_change(AAPL_Close, 5))",
+      "hypothesis": "Short-horizon relative strength of NVDA vs AAPL signals mean reversion or catch-up in AAPL.",
+      "role": ""
+    },
+    {
+      "name": "nvda_volume_zscore_5d_change",
+      "mode": "improve",
+      "parent": "nvda_volume_surge_vs_aapl",
+      "formula": "zscore(NVDA_Volume, 10)",
+      "hypothesis": "Abnormal NVDA volume reflects tech-sector risk events that spill over to AAPL's next day.",
+      "role": ""
+    },
+    {
+      "name": "msft_return_1d_minus_aapl_return_1d",
+      "mode": "improve",
+      "parent": "MSFT_return_1d",
+      "formula": "subtract(pct_change(MSFT_Close, 1), pct_change(AAPL_Close, 1))",
+      "hypothesis": "If MSFT outperformed AAPL today, AAPL may catch up (lead-lag) tomorrow.",
+      "role": ""
+    },
+    {
+      "name": "qqq_volatility_10d",
+      "mode": "new",
+      "parent": "",
+      "formula": "rolling_std(pct_change(QQQ_Close, 1), 10)",
+      "hypothesis": "Market-wide volatility regime affects the next-day up-probability and risk premium for AAPL.",
+      "role": ""
+    },
+    {
+      "name": "nvda_range_vs_aapl_range",
+      "mode": "new",
+      "parent": "",
+      "formula": "subtract(safe_divide(subtract(NVDA_High, NVDA_Low), NVDA_Close), safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close))",
+      "hypothesis": "Relative intraday turbulence in NVDA versus AAPL captures sector stress that AAPL has yet to absorb.",
+      "role": ""
+    },
+    {
+      "name": "qqq_volume_zscore_20",
+      "mode": "new",
+      "parent": "",
+      "formula": "zscore(QQQ_Volume, 20)",
+      "hypothesis": "Unusual market-wide volume marks capitulation or panic days, followed by rebounds.",
+      "role": ""
+    }
+  ]
+}
