@@ -57,7 +57,9 @@ Last week's loop judged every factor **on its own**: a factor was kept only if i
 4. **Telling Claude which factors work together**, and asking it for partners
 5. **A comparison with last week's one-at-a-time approach**
 
-This notebook shows the new version and the comparison. The new code is written out in the cells below. The parts that did not change since last week (the formula language, the information about the data, the call to Claude and the final test) are imported, and are shown in full in `Stage 2_Demo.ipynb`."""))
+In his 21 Oct email he also suggested generating a large set of factors and using **feature selection** to find a good combination (Step 11).
+
+This notebook shows the new version, what the results taught me about the data (Steps 9 and 10), and the comparison (Step 12). The new code is written out in the cells below. The parts that did not change since last week (the formula language, the information about the data, the call to Claude and the final test) are imported, and are shown in full in `Stage 2_Demo.ipynb`."""))
 
 cells.append(code("""# Section 1: Setup, the data, and the three runs I compare
 import sys, json, re, time, random, warnings
@@ -177,7 +179,8 @@ cells.append(module_cell("src/stage2/selection.py", "Section 5b: The rules for t
 
 cells.append(md("""The loop itself. One round: ask Claude, check and compute each formula, test each factor alone, run the team trial, run a few pair trials, then update the team, the promising list and the report cards."""))
 
-cells.append(module_cell("src/stage2/loop_v2.py", "Section 5c: The new loop"))
+cells.append(module_cell("src/stage2/curve.py", "Section 5c: Grading on a curve (tried in Step 10, not used)"))
+cells.append(module_cell("src/stage2/loop_v2.py", "Section 5d: The new loop"))
 
 cells.append(md("""## Step 6: Setting the New Bars with Random Numbers
 
@@ -261,20 +264,89 @@ for k in b_team:
 print('\\nStatus of the 48 factors under the new rules:', b_board.status.value_counts().to_dict())"""))
 note("run_b")
 
-cells.append(md("""## Step 9: The Comparison, and the Final Test on Q4
+cells.append(md("""## Step 9: Why So Few Factors Pass: Each Year Reacts the Same Way to Almost Any Factor
 
-For each run I take the selected factors and do two things:
+Looking at the report cards, Claude noticed it first (round 2 of run C): *"every factor helped in 2023 and 2025 but hurt in 2024"*. Below I count, for each year, how many factors helped: Claude's from both weeks, and the template formulas made with no LLM at all."""))
+
+cells.append(code("""# Section 9: Share of factors that helped in each year (checked on Q3)
+def share_by_year(per_year):
+    return per_year.groupby('year').apply(lambda d: (d.auc_gain > 0).mean())
+
+a_years = pd.read_csv(RUN_A / 'scores_by_year.csv')
+t_years = pd.read_csv('results/stage2/runs/20261015_1645_random/scores_by_year.csv')
+gain_cols = [f'gain_{y}' for y in [2022, 2023, 2024, 2025]]
+c_long = pd.read_csv(RUN_C / 'scoreboard.csv').query('status != \"invalid\"')[['name'] + gain_cols].melt(
+    id_vars='name', value_vars=gain_cols, value_name='auc_gain')
+c_long['year'] = c_long.variable.str[-4:].astype(int)
+table = pd.DataFrame({'Claude, 15 Oct (48)': share_by_year(a_years[a_years.valid.astype(bool)]),
+                      'Claude, 21 Oct (47)': share_by_year(c_long),
+                      'Templates, no LLM (39)': share_by_year(t_years[t_years.valid.astype(bool)])})
+display((table * 100).round(0).astype(int).astype(str) + '%')"""))
+note("year_effect")
+
+cells.append(md("""## Step 10: A Longer Measuring Stick: 8 Checks Instead of 4
+
+Each year has only one checking quarter (Q3, about 63 trading days), so luck is almost as large as the effects we are looking for. I added a second, earlier check every year: train on Q1, check on Q2. Every factor now gets **8 checks instead of 4**. The Q3 checks are exactly the same as before.
+
+(I also tried "grading on a curve", comparing each factor with a typical template factor in the same year. Random numbers then looked better than real price factors in the bad years, so the bar had to rise to 0.02 and nothing passed. I did not use it.)
+
+As before, the bar was set with random numbers and template formulas first, before looking at Claude's factors."""))
+
+cells.append(code("""# Section 10: The new bar, and Claude's factors measured with 8 checks
+null8 = pd.read_csv('results/stage2/checks8_null.csv')
+rules8 = json.loads(Path('results/stage2/rules_v2_8checks.json').read_text())
+rows = []
+for kind in ['noise', 'template']:
+    x = null8[null8.kind == kind]
+    for k in [6, 7]:
+        rows.append({'factors': f'{kind} ({len(x)})', 'rule': f'helped >= {k} of 8 checks, gain >= {rules8["team_gain"]}',
+                     'getting in': f"{((x.checks >= k) & (x.gain >= rules8['team_gain'])).mean():.0%}"})
+display(pd.DataFrame(rows))
+print('Bar used:', rules8['min_years'], 'of 8 checks and average gain >=', rules8['team_gain'])
+
+real8 = pd.read_csv('results/stage2/checks8_real.csv').drop_duplicates('formula')
+real8['week'] = real8.kind.map(lambda k: '15 Oct' if k.startswith('20261015') else '21 Oct')
+print('\\nChecks helped (out of 8): Claude factors vs random numbers')
+display(pd.DataFrame({'Claude factors': real8.checks.value_counts().sort_index(),
+                      'random numbers': null8[null8.kind == 'noise'].checks.value_counts().sort_index()}).fillna(0).astype(int))
+print('Claude factors with the highest average gain:')
+display(real8.sort_values('gain', ascending=False).head(8)[['week', 'factor', 'gain', 'checks', 'lr', 'rf']].round(4))"""))
+note("checks8")
+
+cells.append(md("""## Step 11: Dr Liu's Suggestion: One Big Pile, Then Feature Selection
+
+Dr Liu suggested (21 Oct email) generating a large set of factors with the LLM and then using feature selection to find a good combination. Every factor Claude has written so far goes into one pile, and **forward selection** picks the team: add the factor that improves the team most, if it passes the 8-check bar; re-test the rest on the bigger team; repeat. Then a few pairs are tried on top of the team."""))
+
+cells.append(code("""# Section 11: Forward selection on the whole pile
+RUN_P = Path('results/stage2/pile_8checks')
+p_team = json.loads((RUN_P / 'kept_factors.json').read_text())
+p_log = pd.read_csv(RUN_P / 'selection_log.csv')
+p_pairs = pd.read_csv(RUN_P / 'pairs.csv')
+print(f"Pile: {len(pd.read_csv('results/stage2/checks8_real.csv').drop_duplicates('formula'))} different factors,",
+      f"{len(pd.read_csv(RUN_P / 'scoreboard.csv'))} after removing near-copies of my 22 factors")
+for k in p_team:
+    print(f"Selected: {k['name']}  ({k['how_selected']})\\n  {k['formula']}\\n  Claude's reason: {k['hypothesis']}")
+print('\\nStep 2: best candidates on top of the selected factor')
+display(p_log[p_log.step == 2].sort_values('gain', ascending=False).head(5).round(4))
+print('Pair trials (gain, checks helped, and the extra over the two gains added up):')
+display(p_pairs[['a', 'b', 'group_a', 'group_b', 'gain', 'checks', 'extra', 'joined']].round(4))"""))
+note("pile")
+
+cells.append(md("""## Step 12: The Comparison, and the Final Test on Q4
+
+For each way of choosing factors I take the selected factors and do two things:
 * **Check (Q3):** add all of them together to my 22 factors, and measure the gain in each year
-* **Final test (Q4), used once:** train on Q1-Q2 with my 22 factors, and with the 22 plus the selected factors, predict Q4, and run the Stage 1 backtest (hold Apple only on days the model says "up")
+* **Final test (Q4), used once per selected set:** train on Q1-Q2 with my 22 factors, and with the 22 plus the selected factors, predict Q4, and run the Stage 1 backtest (hold Apple only on days the model says "up")
 
-The runs were finished before this test, and nothing is chosen based on it."""))
+All selections were finished before this test, and nothing is chosen based on it."""))
 
-cells.append(code("""# Section 9a: Check and final test for A, B and C
+cells.append(code("""# Section 12a: Check and final test for every way of choosing factors
 scorer = Scorer(features)
 summary, by_year = [], []
-for label, run, kept in [('A: one at a time (15 Oct)', RUN_A, a_kept),
-                         ('B: same factors, new rules', RUN_B, json.loads((RUN_B / 'kept_factors.json').read_text())),
-                         ('C: new loop (20 Oct)', RUN_C, c_team)]:
+for label, kept in [('A: one at a time (15 Oct)', a_kept),
+                    ('B: 15 Oct factors, team rules', json.loads((RUN_B / 'kept_factors.json').read_text())),
+                    ('C: new loop with Claude (21 Oct)', c_team),
+                    ('P: whole pile, 8 checks', p_team)]:
     row = {'run': label, 'selected': len(kept)}
     if kept:
         values = {k['name']: evaluate(k['formula'], prices) for k in kept}
@@ -291,12 +363,12 @@ for label, run, kept in [('A: one at a time (15 Oct)', RUN_A, a_kept),
 summary = pd.DataFrame(summary).set_index('run')
 display(summary.T.round(4))"""))
 
-cells.append(code("""# Section 9b: Test balanced accuracy in each year (0.5 = coin flip)
+cells.append(code("""# Section 12b: Test balanced accuracy in each year (0.5 = coin flip), and the backtest
 final = pd.concat(by_year, ignore_index=True)
 base = final[final.features == 'stage1_22'].drop_duplicates(['year', 'model']).assign(run='Stage 1 (22 factors)')
 view = pd.concat([base, final[final.features == 'stage1_plus_llm']])
 colors = {'Stage 1 (22 factors)': '#b9bec7', 'A: one at a time (15 Oct)': '#e08a2b',
-          'B: same factors, new rules': '#8fb3de', 'C: new loop (20 Oct)': '#2f6db5'}
+          'B: 15 Oct factors, team rules': '#2f6db5', 'P: whole pile, 8 checks': '#3a9e6f'}
 fig, axes = plt.subplots(1, 2, figsize=(11, 3.6), sharey=True)
 for ax, model in zip(axes, ['logistic_regression', 'random_forest']):
     for run, col in colors.items():
@@ -314,23 +386,24 @@ ret.loc[('buy and hold', 'Apple'), :] = final.groupby('year').buy_hold_return.fi
 print('Backtest return in Q4 of each year'); display(ret)"""))
 note("compare")
 
-cells.append(md("""## Step 10: Running the New Loop Live
+cells.append(md("""## Step 13: Running the New Loop Live
 
-Switched off so the notebook doesn't call Claude every time it is opened. To run it: set `RUN_LIVE = True` (and set the API key in Terminal before starting Jupyter). The same loop runs from Terminal with `python experiments/run_stage2_loop_v2.py --rounds 8`. Every prompt, reply and result is saved in a new folder in `results/stage2/runs_v2/`."""))
+Switched off so the notebook doesn't call Claude every time it is opened. To run it: set `RUN_LIVE = True` (and set the API key in Terminal before starting Jupyter). The same loop runs from Terminal with `python experiments/run_stage2_loop_v2.py --rounds 8` (add `--rules results/stage2/rules_v2_8checks.json` for 8 checks). Every prompt, reply and result is saved in a new folder in `results/stage2/runs_v2/`."""))
 
-cells.append(code("""# Section 10: Run the new loop live
+cells.append(code("""# Section 13: Run the new loop live
 RUN_LIVE = False                    # True = ask Claude for real (needs ANTHROPIC_API_KEY)
 ROUNDS = 8
 
-def run_loop_v2(rounds=ROUNDS):
+def run_loop_v2(rounds=ROUNDS, rules_file='results/stage2/rules_v2.json'):
     out = Path('results/stage2/runs_v2') / f'{time.strftime(\"%Y%m%d_%H%M\")}_claude'
+    r = json.loads(Path(rules_file).read_text())
     loop = LoopV2(proposer=ClaudeProposer('claude-sonnet-5-5', tool=TOOL_V2, system=SYSTEM_V2),
                   features=features, prices=prices, out_dir=out,
                   stage1_importance_path=Path('results/multi_year/permutation_importance_summary.csv'),
-                  rules=Rules(**json.loads(Path('results/stage2/rules_v2.json').read_text())))
-    for r in range(1, rounds + 1):
-        print(f'Round {r}')
-        loop.run_round(r)
+                  rules=Rules(**{**r, 'checks': tuple(r.get('checks', ['q3']))}))
+    for i in range(1, rounds + 1):
+        print(f'Round {i}')
+        loop.run_round(i)
     print('Selected team:', loop.team, '| saved in', out)
     return loop
 
