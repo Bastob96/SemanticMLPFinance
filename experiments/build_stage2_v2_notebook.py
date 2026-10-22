@@ -45,21 +45,20 @@ def module_cell(path, title):
 
 cells.append(md("""# Stage 2, Version 2: Testing Factors Together
 
-**PG-S2-36 - Automatic Discovery of Interpretable Financial Factors**
+PG-S2-36, Automatic Discovery of Interpretable Financial Factors
+Abu Wakkas Bastob, 22 October 2026
 
-Abu Wakkas Bastob
+Last week my loop judged each factor on its own, and only kept the ones that helped by themselves. On 20 October Dr Liu pointed out that this can throw away factors that are only useful together with other factors. He asked me to:
 
-Last week's loop judged every factor **on its own**: a factor was kept only if it helped by itself. Dr Liu pointed out (20 Oct) that this throws away factors that only work **together with other factors**. He asked for:
+1. give Claude more detailed feedback on every factor (formula, result in each year, LR vs RF, kept or not, similarity to other factors, and a short reason)
+2. test each new factor on top of the factors I have already selected, not just on its own
+3. try simple pairs of promising factors
+4. tell Claude which factors seem to work together and ask it for partners
+5. compare the new version with last week's one-at-a-time approach
 
-1. **More detailed feedback to Claude** for every factor: the formula, how it did in each year, Logistic Regression vs Random Forest, kept or rejected, how similar it is to other factors, and a short reason why
-2. **A team trial**: test each new factor on top of the factors already selected, not only on its own
-3. **Pair trials** for promising factors that may work well together
-4. **Telling Claude which factors work together**, and asking it for partners
-5. **A comparison with last week's one-at-a-time approach**
+In his email on 21 October he also suggested generating a bigger set of factors and using feature selection to pick a good combination, so I tried that as well (Step 11).
 
-In his 21 Oct email he also suggested generating a large set of factors and using **feature selection** to find a good combination (Step 11).
-
-This notebook shows the new version, what the results taught me about the data (Steps 9 and 10), and the comparison (Step 12). The new code is written out in the cells below. The parts that did not change since last week (the formula language, the information about the data, the call to Claude and the final test) are imported, and are shown in full in `Stage 2_Demo.ipynb`."""))
+The new code is written out in the cells below. The parts that haven't changed since last week (the formula language, the market summary, the Claude call and the final test) are just imported here. They are shown in full in `Stage 2_Demo.ipynb`."""))
 
 cells.append(code("""# Section 1: Setup, the data, and the three runs I compare
 import sys, json, re, time, random, warnings
@@ -99,25 +98,26 @@ p_kept = json.loads(Path('results/stage2/pile_8checks/kept_factors.json').read_t
 print('P: pile_8checks |', len(pd.read_csv('results/stage2/pile_8checks/scoreboard.csv')),
       'factors in one pile (all of A and C, near-copies removed) |', len(p_kept), 'selected  (Step 11)')"""))
 
-cells.append(md("""## Step 2: What Changed
+cells.append(md("""## Step 2: What changed
 
 | | Last week (A) | This week (C) |
 |---|---|---|
-| What Claude sees | a scoreboard line per factor: average gain, years helped | a **report card** per factor: gain in each year, LR vs RF, similarity, kept or not and why, and its own lesson |
-| How a factor is tested | **alone**: added to my 22 factors | alone, then **on top of the selected team**, and **in pairs** |
-| Who gets kept | factors that help alone | factors that make the team better, alone or as a pair |
-| Weak-alone factors | thrown away | kept on a **promising list** for pair trials |
-| What Claude is asked for | 3 variants + 3 new ideas | 2 **improve** + 2 **new** + 2 **partner** factors, plus a lesson for every factor of the last round |
+| What Claude sees | one scoreboard line per factor (average gain, years helped) | a report card per factor (gain in each year, LR vs RF, similarity, kept or not and why, its own lesson) |
+| How a factor is tested | alone, added to my 22 factors | alone, then on top of the selected team, and in pairs |
+| What gets kept | factors that help alone | factors that make the team better, alone or as a pair |
+| Factors that are weak alone | thrown away | kept on a "promising" list for pair trials |
+| What Claude is asked for | 3 variants and 3 new ideas | 2 improve, 2 new and 2 partner factors, plus a lesson about each factor from the last round |
 
-**The four ways of choosing factors I compare in Step 12:**
-* **A**: last week's run, every factor judged alone (1 kept)
-* **B**: last week's same 48 factors, judged with the new team and pair rules (no new Claude call)
-* **C**: the new loop with Claude, this week (48 new factors)
-* **P**: Dr Liu's 21 Oct idea: all factors from A and C in one pile, then forward selection (Step 11)
+I compare four ways of choosing factors in Step 12:
 
-Everything else is the same as last week: the formula language (past data only), the four years 2022-2025 (train on Q1-Q2, check on Q3), Logistic Regression and Random Forest, and Q4 is only used once, in the final test.
+- **A** is last week's run, where every factor was judged alone (1 kept).
+- **B** uses last week's same 48 factors, but judges them with the new team and pair rules. No new Claude call is needed.
+- **C** is the new loop with Claude, run this week (48 new factors).
+- **P** is Dr Liu's idea from 21 October. All the factors from A and C go into one pile, and forward selection picks from it (Step 11).
 
-**One round of the new loop:**
+Everything else is the same as last week: the formula language (only past data), the four years 2022 to 2025 (train on Q1 and Q2, check on Q3), the two models, and Q4 only being used once at the very end.
+
+One round of the new loop looks like this:
 ```
 Claude proposes 6 factors (2 improve, 2 new, 2 partner)
         |
@@ -132,9 +132,9 @@ joins the team  /  stays on the promising list  /  rejected
 a report card for every factor goes back to Claude in the next round
 ```"""))
 
-cells.append(md("""## Step 3: The Report Card Claude Gets
+cells.append(md("""## Step 3: The report card Claude gets
 
-Every factor Claude has tried gets a few lines like the ones below. The "why" line is written automatically from the numbers, so it never contains anything that wasn't measured. In the next round Claude has to write its own one-line lesson about each factor, and that lesson is shown on the card from then on."""))
+Every factor Claude tries gets a short report card like the ones below. The "why" line is written automatically from the measured numbers, so it can't say anything that wasn't actually measured. In the next round Claude has to write a one-line lesson about each of its factors, and that lesson stays on the card after that."""))
 
 cells.append(module_cell("src/stage2/feedback.py", "Section 3a: The report card"))
 
@@ -150,9 +150,9 @@ for r in examples:
     print(report_card(r), end='\\n\\n')"""))
 note("cards")
 
-cells.append(md("""## Step 4: What I Tell Claude Now
+cells.append(md("""## Step 4: What I tell Claude now
 
-The instructions have the same parts as last week (goal, data, the 22 factors, formula language), plus three new parts: **the selected team**, **the promising list** and **the pair trials so far**. The scoreboard is replaced by the report cards. The task now asks for improve, new and partner factors, and a lesson for every factor of the last round."""))
+The instructions still have last week's parts (the goal, the data, my 22 factors and the formula language). Three new parts are added: the selected team, the promising list, and the pair trials so far. The old scoreboard is replaced by the report cards, and the task now asks for improve, new and partner factors plus a lesson for every factor from the previous round."""))
 
 cells.append(module_cell("src/stage2/prompt_v2.py", "Section 4a: The new instructions for Claude"))
 
@@ -174,30 +174,33 @@ for f in reply['factors']:
     print(f"- [{f['mode']}{parent}] {f['name']} | role: {f['role']}\\n    {f['formula']}\\n    {f['hypothesis']}")"""))
 note("prompt")
 
-cells.append(md("""## Step 5: Team Trial and Pair Trial
+cells.append(md("""## Step 5: Team trial and pair trial
 
-The scoring code from last week now takes two inputs: the factor(s) to add, and the team they are added on top of.
-* **Alone:** add one factor to my 22 factors (exactly last week's test; the numbers are identical)
-* **Team trial:** add one factor to my 22 factors plus the selected team
-* **Pair trial:** add two factors at once to my 22 factors plus the selected team
+The scoring code from last week now takes two inputs, the factor (or factors) to add and the team to add them on top of. That gives three kinds of test:
 
-The gain is always "check score (ROC AUC on Q3) with the new factor(s) minus without", for each of the four years, averaged over Logistic Regression and the three Random Forests."""))
+- **Alone:** one factor added to my 22 factors. This is last week's test and gives the same numbers.
+- **Team trial:** one factor added to my 22 factors plus the selected team.
+- **Pair trial:** two factors added at the same time, on top of the 22 factors and the team.
+
+In every case the gain is the Q3 ROC AUC with the new factor(s) minus the AUC without them, for each of the four years, averaged over Logistic Regression and the three Random Forests."""))
 
 cells.append(module_cell("src/stage2/scoring.py", "Section 5a: Testing factors alone, on top of the team, or in a pair"))
 cells.append(module_cell("src/stage2/selection.py", "Section 5b: The rules for the team, the pairs and the promising list"))
 
-cells.append(md("""The loop itself. One round: ask Claude, check and compute each formula, test each factor alone, run the team trial, run a few pair trials, then update the team, the promising list and the report cards."""))
+cells.append(md("""This is the loop itself. In each round it asks Claude for factors, checks and computes each formula, tests each factor alone, runs the team trial and a few pair trials, and then updates the team, the promising list and the report cards."""))
 
 cells.append(module_cell("src/stage2/curve.py", "Section 5c: Grading on a curve (tried in Step 10, not used)"))
 cells.append(module_cell("src/stage2/loop_v2.py", "Section 5d: The new loop"))
 
-cells.append(md("""## Step 6: Setting the New Bars with Random Numbers
+cells.append(md("""## Step 6: Setting the new bars with random numbers
 
-Same idea as last week's fake-factor test: before any real run, I put factors made of **pure random numbers** through the new tests and counted how often they would get into the team by luck. The bars were fixed before the real runs and are the same for B and C. This check found three problems, and each one changed the design:
+This is the same idea as last week's fake-factor test. Before running anything real, I put factors made of pure random numbers through the new tests to see how often they would get into the team just by luck. The bars were fixed before the real runs, and B and C use the same ones. The check turned up three problems, and each one changed the design.
 
-1. **Lucky pairs.** My first pair rule was "the pair must beat the better of its two members alone". A random factor that looks promising was a little lucky on its own. Put two lucky ones together and their luck simply adds up, so the pair always looks better than either one: 42% of promising random pairs passed. The rule now is: **the pair's gain must be clearly above the two gains added up.** Luck adds up; real teamwork gives more than the sum.
-2. **The forest changed by itself.** With its default setting, the Random Forest looks at 4 factors at each split when it has up to 24 factors, but at 5 from 25 factors on. So on a team of 2, adding *any* extra column changed the forest itself, and 8 of 18 promising random factors passed the team trial. Now the forest always looks at 4 factors per split. For my 22 factors and for every single-factor test this is exactly what it did before, so last week's numbers do not change.
-3. **Second chances.** I had planned to give every factor on the promising list one more team trial at the end. Even after fix 2, about 1 in 18 promising random factors got in that way, so this step is switched off."""))
+**Lucky pairs.** My first pair rule was that a pair had to beat the better of its two members on its own. But a random factor that looks promising has usually been a bit lucky already, and when you put two of them together their luck adds up, so the pair nearly always looks better than either one. With that rule, 30% of the promising random pairs got in. So now a pair has to do clearly better than the two gains added together.
+
+**The forest changing by itself.** With the default setting, the Random Forest looks at 4 factors at each split while it has up to 24 factors, and at 5 once it has 25 or more. On a team of 2, adding any extra column (even random numbers) changed the forest itself, and 8 out of 18 promising random factors passed the team trial. I now fix it at 4 factors per split. That's what the forest was already using for my 22 factors and for every single-factor test, so last week's numbers don't change.
+
+**Second chances.** I had planned to give everything on the promising list one more team trial at the end. Even after fixing the forest, about 1 in 18 promising random factors got in that way, so I turned that step off."""))
 
 cells.append(code("""# Section 6: How often random numbers would get into the team
 noise_team = pd.read_csv('results/stage2/noise_null_v2_team.csv', index_col=0)
@@ -226,9 +229,9 @@ rows.append({'test': f'second chance ({len(second)} promising random factors)',
 display(pd.DataFrame(rows))"""))
 note("noise")
 
-cells.append(md("""## Step 7: What Happened in the New Run (C)
+cells.append(md("""## Step 7: What happened in the new run (C)
 
-8 rounds, 6 factors per round (48 in total, the same budget as last week)."""))
+Eight rounds of 6 factors each, so 48 factors in total, the same as last week."""))
 
 cells.append(code("""# Section 7a: Round by round: team size, promising list, pair trials
 c_rounds = pd.read_csv(RUN_C / 'rounds.csv')
@@ -259,9 +262,9 @@ else:
     print('No pair trials.')"""))
 note("run_c")
 
-cells.append(md("""## Step 8: Last Week's Factors, Judged the New Way (B)
+cells.append(md("""## Step 8: Last week's factors, judged the new way (B)
 
-To separate the effect of the new **judging** from the effect of the new **feedback to Claude**, I took the same 48 factors Claude proposed last week, in the same order, and put them through the new team trial, pair trials and promising list. No new Claude call is needed for this."""))
+I wanted to separate two things: the effect of the new judging, and the effect of the new feedback to Claude. So I took the same 48 factors Claude suggested last week, in the same order, and ran them through the new team trial, pair trials and promising list. This didn't need any new Claude calls."""))
 
 cells.append(code("""# Section 8: What the new rules pick from last week's 48 factors
 b_board = pd.read_csv(RUN_B / 'scoreboard.csv').fillna({'reason': '', 'how_selected': ''})
@@ -273,9 +276,9 @@ for k in b_team:
 print('\\nStatus of the 48 factors under the new rules:', b_board.status.value_counts().to_dict())"""))
 note("run_b")
 
-cells.append(md("""## Step 9: Why So Few Factors Pass: Each Year Reacts the Same Way to Almost Any Factor
+cells.append(md("""## Step 9: Why so few factors pass
 
-Looking at the report cards, Claude noticed it first (round 2 of run C): *"every factor helped in 2023 and 2025 but hurt in 2024"*. Below I count, for each year, how many factors helped: Claude's from both weeks, and the template formulas made with no LLM at all."""))
+Claude actually spotted this first, in round 2 of run C, when it wrote that "every factor helped in 2023 and 2025 but hurt in 2024". The table below counts how many factors helped in each year, for Claude's factors from both weeks and for the template formulas that were made without any LLM."""))
 
 cells.append(code("""# Section 9: Share of factors that helped in each year (checked on Q3)
 def share_by_year(per_year):
@@ -293,13 +296,13 @@ table = pd.DataFrame({'Claude, 15 Oct (48)': share_by_year(a_years[a_years.valid
 display((table * 100).round(0).astype(int).astype(str) + '%')"""))
 note("year_effect")
 
-cells.append(md("""## Step 10: A Longer Measuring Stick: 8 Checks Instead of 4
+cells.append(md("""## Step 10: A longer measuring stick (8 checks instead of 4)
 
-Each year has only one checking quarter (Q3, about 63 trading days), so luck is almost as large as the effects we are looking for. I added a second, earlier check every year: train on Q1, check on Q2. Every factor now gets **8 checks instead of 4**. The Q3 checks are exactly the same as before.
+Each year only has one checking quarter (Q3, roughly 63 trading days), so the effect of luck is about as big as the effects I'm trying to find. To get more evidence I added a second, earlier check every year, where the model trains on Q1 and is checked on Q2. That gives each factor 8 checks instead of 4. The Q3 checks are exactly the same as before.
 
-(I also tried "grading on a curve", comparing each factor with a typical template factor in the same year. Random numbers then looked better than real price factors in the bad years, so the bar had to rise to 0.02 and nothing passed. I did not use it.)
+I also tried "grading on a curve", where each factor is compared with a typical template factor from the same year. The problem was that random numbers then looked better than real price factors in the bad years, so the bar had to go up to 0.02 and nothing passed at all. I didn't use it in the end.
 
-As before, the bar was set with random numbers and template formulas first, before looking at Claude's factors."""))
+As before, I set the bar using random numbers and template formulas first, before looking at any of Claude's factors."""))
 
 cells.append(code("""# Section 10: The new bar, and Claude's factors measured with 8 checks
 null8 = pd.read_csv('results/stage2/checks8_null.csv')
@@ -322,9 +325,9 @@ print('Claude factors with the highest average gain:')
 display(real8.sort_values('gain', ascending=False).head(8)[['week', 'factor', 'gain', 'checks', 'lr', 'rf']].round(4))"""))
 note("checks8")
 
-cells.append(md("""## Step 11: Dr Liu's Suggestion: One Big Pile, Then Feature Selection
+cells.append(md("""## Step 11: Dr Liu's suggestion, one big pile and then feature selection
 
-Dr Liu suggested (21 Oct email) generating a large set of factors with the LLM and then using feature selection to find a good combination. Every factor Claude has written so far goes into one pile, and **forward selection** picks the team: add the factor that improves the team most, if it passes the 8-check bar; re-test the rest on the bigger team; repeat. Then a few pairs are tried on top of the team."""))
+In his 21 October email Dr Liu suggested generating a large set of factors with the LLM and then using feature selection to find a good combination. Here, every factor Claude has written so far goes into one pile, and forward selection builds the team from it. It adds the factor that improves the team the most (if it passes the 8-check bar), re-tests the rest on top of the bigger team, and repeats. After that, a few pairs are tried on top of the team."""))
 
 cells.append(code("""# Section 11: Forward selection on the whole pile
 RUN_P = Path('results/stage2/pile_8checks')
@@ -341,13 +344,14 @@ print('Pair trials (gain, checks helped, and the extra over the two gains added 
 display(p_pairs[['a', 'b', 'group_a', 'group_b', 'gain', 'checks', 'extra', 'joined']].round(4))"""))
 note("pile")
 
-cells.append(md("""## Step 12: The Comparison, and the Final Test on Q4
+cells.append(md("""## Step 12: The comparison and the final test on Q4
 
-For each way of choosing factors I take the selected factors and do two things:
-* **Check (Q3):** add all of them together to my 22 factors, and measure the gain in each year
-* **Final test (Q4), used once per selected set:** train on Q1-Q2 with my 22 factors, and with the 22 plus the selected factors, predict Q4, and run the Stage 1 backtest (hold Apple only on days the model says "up")
+For each way of choosing factors I take the selected factors and do two things.
 
-All selections were finished before this test, and nothing is chosen based on it."""))
+- **Check on Q3:** add them all to my 22 factors together and measure the gain in each year.
+- **Final test on Q4 (used once per selected set):** train on Q1 and Q2 with my 22 factors, and again with the 22 plus the selected factors, predict Q4, and run the Stage 1 backtest (hold Apple only on days the model says "up").
+
+All the selections were finished before this test, and nothing here was chosen based on Q4."""))
 
 cells.append(code("""# Section 12a: Check and final test for every way of choosing factors
 scorer = Scorer(features)
@@ -395,9 +399,9 @@ ret.loc[('buy and hold', 'Apple'), :] = final.groupby('year').buy_hold_return.fi
 print('Backtest return in Q4 of each year'); display(ret)"""))
 note("compare")
 
-cells.append(md("""## Step 13: Running the New Loop Live
+cells.append(md("""## Step 13: Running the new loop live
 
-Switched off so the notebook doesn't call Claude every time it is opened. To run it: set `RUN_LIVE = True` (and set the API key in Terminal before starting Jupyter). The same loop runs from Terminal with `python experiments/run_stage2_loop_v2.py --rounds 8` (add `--rules results/stage2/rules_v2_8checks.json` for 8 checks). Every prompt, reply and result is saved in a new folder in `results/stage2/runs_v2/`."""))
+This is switched off, so the notebook doesn't call Claude every time it's opened. To run it, set `RUN_LIVE = True` (and set the API key in Terminal before starting Jupyter). The same loop can be run from Terminal with `python experiments/run_stage2_loop_v2.py --rounds 8`, adding `--rules results/stage2/rules_v2_8checks.json` to use 8 checks. Every prompt, reply and result is saved in a new folder under `results/stage2/runs_v2/`."""))
 
 cells.append(code("""# Section 13: Run the new loop live
 RUN_LIVE = False                    # True = ask Claude for real (needs ANTHROPIC_API_KEY)
