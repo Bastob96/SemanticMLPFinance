@@ -94,7 +94,10 @@ print('A:', RUN_A.name, '|', len(a_board), 'factors tried |', len(a_kept), 'kept
 for name, run in [('B', RUN_B), ('C', RUN_C)]:
     n = len(pd.read_csv(run / 'scoreboard.csv'))
     team = json.loads((run / 'kept_factors.json').read_text())
-    print(f'{name}:', run.name, '|', n, 'factors tried |', len(team), 'in the selected team')"""))
+    print(f'{name}:', run.name, '|', n, 'factors tried |', len(team), 'in the selected team')
+p_kept = json.loads(Path('results/stage2/pile_8checks/kept_factors.json').read_text())
+print('P: pile_8checks |', len(pd.read_csv('results/stage2/pile_8checks/scoreboard.csv')),
+      'factors in one pile (all of A and C, near-copies removed) |', len(p_kept), 'selected  (Step 11)')"""))
 
 cells.append(md("""## Step 2: What Changed
 
@@ -105,6 +108,12 @@ cells.append(md("""## Step 2: What Changed
 | Who gets kept | factors that help alone | factors that make the team better, alone or as a pair |
 | Weak-alone factors | thrown away | kept on a **promising list** for pair trials |
 | What Claude is asked for | 3 variants + 3 new ideas | 2 **improve** + 2 **new** + 2 **partner** factors, plus a lesson for every factor of the last round |
+
+**The four ways of choosing factors I compare in Step 12:**
+* **A**: last week's run, every factor judged alone (1 kept)
+* **B**: last week's same 48 factors, judged with the new team and pair rules (no new Claude call)
+* **C**: the new loop with Claude, this week (48 new factors)
+* **P**: Dr Liu's 21 Oct idea: all factors from A and C in one pile, then forward selection (Step 11)
 
 Everything else is the same as last week: the formula language (past data only), the four years 2022-2025 (train on Q1-Q2, check on Q3), Logistic Regression and Random Forest, and Q4 is only used once, in the final test.
 
