@@ -43,10 +43,10 @@ An ablation works like testing a recipe: bake the cake again without one ingredi
 | Language model | Claude Sonnet | a smaller model (Claude Haiku) |
 | Number of rounds | 8 | 16 |
 | Testing together | team trial | each factor judged alone (last week's run A) |
-| Pair trials | on | off |
+| Pair trials | on | off (re-judging the same factors) |
 | The LLM itself | Claude | template formulas, no LLM |
 
-Every run uses exactly the same data, split, models and bars as on 22 October. The Q4 test quarters are only used at the very end, once per selected set (Step 4)."""))
+Every run uses exactly the same data, split, models and bars as on 22 October, and the same Python setup (Anaconda, scikit-learn 1.7.2; see Step 7). The Q4 test quarters are only used at the very end, once per selected set (Step 4)."""))
 
 cells.append(code("""# Section 1: Setup and the list of runs
 import sys, json, warnings
@@ -66,14 +66,14 @@ RUNS = {   # label: (folder, what is different from the full method)
     'rounds_16':       (R / 'abl_claude_16rounds', '16 rounds instead of 8'),
     'C_repeat2':       (R / 'abl_claude_repeat2', 'full method, run again'),
     'C_repeat3':       (R / 'abl_claude_repeat3', 'full method, run again'),
-    'C_no_pairs':      (R / 'abl_C_nopairs', "C's factors, pair trials off"),
     'full_B':          (R / '20261021_1110_replay_20261015_1635_claude', "15 Oct factors, team rules (22 Oct run B)"),
     'B_no_pairs':      (R / 'abl_B_nopairs', "15 Oct factors, pair trials off"),
+    'no_feedback_no_pairs': (R / 'abl_nofeedback_nopairs', "no-feedback factors, pair trials off"),
+    'haiku_no_pairs':  (R / 'abl_haiku_nopairs', "Haiku factors, pair trials off"),
     'one_at_a_time_A': (Path('results/stage2/runs/20261015_1635_claude'), '15 Oct factors judged alone (run A)'),
     'template_0':      (R / 'abl_template_seed0', 'template formulas, no LLM'),
     'template_1':      (R / 'abl_template_seed1', 'template formulas, no LLM'),
     'template_2':      (R / 'abl_template_seed2', 'template formulas, no LLM'),
-    'C_check':         (R / 'abl_C_check', "C's factors re-judged (should equal C)"),
     'B_check':         (R / 'abl_B_check', "15 Oct factors re-judged (should equal B)"),
 }
 
@@ -183,8 +183,9 @@ COMPARE = [   # part tested, full method run(s), changed run(s)
     ('Feedback to Claude (report cards off)', ['full_C'], ['no_feedback']),
     ('Language model (Sonnet -> Haiku)', ['full_C'], ['haiku']),
     ('More rounds (8 -> 16)', ['full_C'], ['rounds_16']),
-    ('Pair trials off (on C factors)', ['full_C'], ['C_no_pairs']),
-    ('Pair trials off (on 15 Oct factors)', ['full_B'], ['B_no_pairs']),
+    ('Pair trials off (15 Oct factors)', ['full_B'], ['B_no_pairs']),
+    ('Pair trials off (no-feedback factors)', ['no_feedback'], ['no_feedback_no_pairs']),
+    ('Pair trials off (Haiku factors)', ['haiku'], ['haiku_no_pairs']),
     ('Testing together off (judge alone)', ['full_B'], ['one_at_a_time_A']),
     ('Claude -> template formulas', ['full_C', 'C_repeat2', 'C_repeat3'], ['template_0', 'template_1', 'template_2']),
 ]
@@ -240,13 +241,15 @@ if len(summary):
 
 cells.append(md("""## Step 7: Checks
 
-Two runs only re-judge saved factors with exactly the same rules, so they must select the same factors as the original runs. If they do, the code changes for the switches didn't change anything else."""))
+`B_check` re-judges the 15 October factors with exactly the same rules as run B, so it must select the same 4 factors. If it does, the code changes for the switches didn't change anything else.
+
+**A lesson from this check.** The first time I ran it, it selected 2 different factors. The code was not the cause (the old and new code give identical numbers). The cause was the Python setup: runs B and C were made with Anaconda's Python (scikit-learn 1.7.2), and the project's `.venv` has scikit-learn 1.9.1. The two versions round the model maths very slightly differently, and because the rules make yes/no decisions ("gain at least 0.01?"), tiny differences can change which factors get in. All runs in this notebook therefore use Anaconda's Python, the same as B and C. It also shows how fragile the selection is, which is why the repeats in Step 6 matter."""))
 
 cells.append(code("""# Section 7: Re-judged runs must match the originals
 def team(label):
     f = RUNS[label][0] / 'kept_factors.json'
     return [k['name'] for k in json.loads(f.read_text())] if finished(label) else None
-for check, original in [('C_check', 'full_C'), ('B_check', 'full_B')]:
+for check, original in [('B_check', 'full_B')]:
     a, b = team(check), team(original)
     if a is None:
         print(f'{check}: not run yet')
