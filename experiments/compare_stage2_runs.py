@@ -10,7 +10,7 @@ Nothing here is used to choose factors: the runs are fixed before this script is
 Usage:
     python experiments/compare_stage2_runs.py          # A = 15 Oct run, B = latest replay, C = latest v2 Claude run
     python experiments/compare_stage2_runs.py A=results/stage2/runs/20261015_1635_claude \
-        B=results/stage2/runs_v2/<replay run> C=results/stage2/runs_v2/<claude run>
+        B=results/stage2/runs_v2/<replay run> C=results/stage2/runs_v2/<claude run> [out=results/stage2/<folder>]
 Writes results/stage2/comparison/summary.csv and by_year.csv.
 """
 
@@ -35,8 +35,13 @@ warnings.filterwarnings("ignore")
 OUT = ROOT / "results/stage2/comparison"
 
 if __name__ == "__main__":
-    runs = [a.split("=", 1) for a in sys.argv[1:]]
-    if not runs:
+    args = [a.split("=", 1) for a in sys.argv[1:]]
+    OUT = next((ROOT / v for k, v in args if k == "out"), OUT)        # out=results/stage2/<folder> (optional)
+    runs = [(k, v) for k, v in args if k != "out" and (ROOT / v / "kept_factors.json").exists()]
+    skipped = [k for k, v in args if k != "out" and not (ROOT / v / "kept_factors.json").exists()]
+    if skipped:
+        print("Not run yet, skipped:", ", ".join(skipped))
+    if not [k for k, _ in args if k != "out"]:
         v2 = sorted((ROOT / "results/stage2/runs_v2").glob("*"))
         replay = [r for r in v2 if "_replay_" in r.name]
         claude = [r for r in v2 if r.name.endswith("_claude") and "_replay_" not in r.name]

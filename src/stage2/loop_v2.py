@@ -13,6 +13,10 @@ Every round:
      (two lucky factors only add up their luck; real teamwork gives more than the sum).
   6. Factors that are weak alone but show some sign of life stay on the promising list.
   7. Everything is saved and goes back to Claude in the next round.
+Ablation switches (Liu, 22 Oct: test how much each part of the design matters):
+  feedback=False  Claude sees only the names and formulas already tried (so it does not repeat them),
+                  with no scores, report cards, team, promising list or pair results.
+  pairs=False     no pair trials: factors can only join the team one at a time.
 finalize() gives the promising list one more team trial at the end. It is off by default in
 experiments/run_stage2_loop_v2.py because the random-number check showed it lets luck in (1 in 18).
 The Q4 test quarters are never used here.
@@ -56,6 +60,8 @@ class LoopV2:
     n_improve: int = 2
     n_new: int = 2
     n_partner: int = 2
+    feedback: bool = True                         # ablation: False hides all results from Claude
+    pairs_on: bool = True                         # ablation: False switches the pair trials off
     board: list = field(default_factory=list)     # one record per factor tried
     pairs: list = field(default_factory=list)     # one record per pair trial
     team: list = field(default_factory=list)      # names of the selected team, in the order they joined
@@ -301,12 +307,19 @@ class LoopV2:
     def run_round(self, round_no):
         t0 = time.time()
         previous = [r["name"] for r in self.board if r["round"] == round_no - 1]
+        if self.feedback:
+            texts = dict(notebook=lab_notebook(self.board), team_text=self.team_text(),
+                         promising_text=self.promising_text(), pairs_text=self.pairs_text())
+        else:                                    # ablation: no results go back to Claude
+            hidden = "(not shown in this run)"
+            tried = "\n".join(f"- {r['name']} = {r['formula']}" for r in self.board) or "(none yet)"
+            texts = dict(notebook="Results are NOT shown in this run. Factors already tried (do not repeat them):\n" + tried,
+                         team_text=hidden, promising_text=hidden, pairs_text=hidden)
+            previous = []
         prompt = build_prompt_v2(round_no=round_no, n_improve=self.n_improve, n_new=self.n_new,
                                  n_partner=self.n_partner, base_formulas=BASE_FORMULAS,
                                  stage1_top=self.stage1_top, market=self.market,
-                                 notebook=lab_notebook(self.board), team_text=self.team_text(),
-                                 promising_text=self.promising_text(), pairs_text=self.pairs_text(),
-                                 rules=self.rules.as_dict(), previous_names=previous)
+                                 rules=self.rules.as_dict(), previous_names=previous, **texts)
         tag = f"round_{round_no:02d}"
         (self.out_dir / f"{tag}_prompt.txt").write_text(prompt)
         response = self.proposer(prompt)
@@ -340,7 +353,8 @@ class LoopV2:
         team_before = len(self.team)
         self._grow_team(tested, how=f"team trial, round {round_no}")    # 2. team trial
         pairs_before = len(self.pairs)
-        self._pair_trials(round_no, [r["name"] for r in tested if r["status"] != "kept"])   # 3. pair trials
+        if self.pairs_on:
+            self._pair_trials(round_no, [r["name"] for r in tested if r["status"] != "kept"])   # 3. pair trials
         for r in self.board:                                       # 4. statuses (old promising ones may have joined)
             if r["status"] in ("tested", "promising"):
                 self._set_status(r)
@@ -430,6 +444,6 @@ class ReplayProposer:
     def __call__(self, prompt):
         round_no = int(re.match(r"ROUND (\d+)", prompt).group(1))
         saved = json.loads((self.run_dir / f"round_{round_no:02d}_response.json").read_text())
-        factors = [{**f, "mode": "improve" if f.get("mode") == "variant" else f.get("mode", "new"), "role": ""}
+        factors = [{**f, "mode": "improve" if f.get("mode") == "variant" else f.get("mode", "new"), "role": f.get("role", "") or ""}
                    for f in saved.get("factors", [])]
         return {"reflection": f"replay of {self.run_dir.name}, round {round_no}", "lessons": [], "factors": factors}

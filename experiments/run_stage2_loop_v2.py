@@ -6,6 +6,10 @@ Re-judge the clues of an earlier run with the new rules (no LLM, no API key):
     python experiments/run_stage2_loop_v2.py --proposer replay --replay results/stage2/runs/20261015_1635_claude
 Offline test with template formulas (no LLM):
     python experiments/run_stage2_loop_v2.py --rounds 2 --proposer template
+Ablations (Liu, 22 Oct):
+    python experiments/run_stage2_loop_v2.py --rounds 8 --no-feedback          # Claude sees no results
+    python experiments/run_stage2_loop_v2.py --rounds 8 --model claude-haiku-5-5   # a smaller Claude model
+    python experiments/run_stage2_loop_v2.py --proposer replay --replay <run> --no-pairs   # pair trials off
 Continue a stopped run:
     python experiments/run_stage2_loop_v2.py --rounds 8 --out results/stage2/runs_v2/<run> --resume
 """
@@ -51,6 +55,8 @@ if __name__ == "__main__":
     ap.add_argument("--out", type=Path)
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--rules", type=Path, default=RULES_FILE, help="bars to use (default results/stage2/rules_v2.json)")
+    ap.add_argument("--no-feedback", action="store_true", help="ablation: Claude sees only the formulas already tried, no results")
+    ap.add_argument("--no-pairs", action="store_true", help="ablation: switch the pair trials off")
     args = ap.parse_args()
 
     if args.proposer == "claude":
@@ -65,11 +71,15 @@ if __name__ == "__main__":
         if rules_file.exists() else Rules()
 
     tag = args.proposer if args.proposer != "replay" else f"replay_{Path(args.replay).name}"
+    tag += ("_nofeedback" if args.no_feedback else "") + ("_nopairs" if args.no_pairs else "")
+    if args.proposer == "claude" and args.model != "claude-sonnet-5-5":
+        tag += "_" + args.model.replace("claude-", "")
     out = args.out or ROOT / "results/stage2/runs_v2" / f"{datetime.now():%Y%m%d_%H%M}_{tag}"
     raw = pd.read_csv(DATA)
     loop = LoopV2(proposer=proposer, features=build_stage1_features(raw), prices=wide_prices(raw),
                   out_dir=out, stage1_importance_path=IMPORTANCE, rules=rules,
-                  n_improve=args.improve, n_new=args.new, n_partner=args.partner)
+                  n_improve=args.improve, n_new=args.new, n_partner=args.partner,
+                  feedback=not args.no_feedback, pairs_on=not args.no_pairs)
 
     start = 1
     if args.resume and (out / "scoreboard.csv").exists():
@@ -79,6 +89,8 @@ if __name__ == "__main__":
         (out / "config.json").write_text(json.dumps({**vars(args), "out": str(out), "rules": rules.as_dict(),
                                                      "started": datetime.now().isoformat()}, indent=2, default=str))
     print(f"Rules: {rules.as_dict()}")
+    if args.no_feedback or args.no_pairs:
+        print(f"Ablation: feedback {'off' if args.no_feedback else 'on'}, pair trials {'off' if args.no_pairs else 'on'}")
 
     for r in range(start, args.rounds + 1):
         print(f"Round {r}", flush=True)
