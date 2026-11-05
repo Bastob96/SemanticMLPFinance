@@ -1,0 +1,85 @@
+{
+  "reflection": "Nothing has joined the team yet. Almost every factor fails in 2024, a strong trending year, and often 2022. The best signals are relative: aapl_rel_peer_volume_gap (3-day Apple vs peer mean) helped both LR and RF, and it paired with the NVDA/QQQ volume factor. Single-day Apple candle features flip sign across years. Next I will try multi-day relative moves that are robust to trend, volume-based peer-state variables, and relative moves scaled by volatility. I will avoid heavy-tailed ratios and near-copies of existing factors.",
+  "lessons": [
+    {
+      "name": "peer_dispersion_z20",
+      "lesson": "Z-scoring the dispersion destroyed the level information RF used and made it unstable, giving a big loss in 2024."
+    },
+    {
+      "name": "aapl_close_position_range_sign_vol",
+      "lesson": "Scaling the candle position by relative range helped LR a little but is still a one-day Apple pattern that flipped in 2024."
+    },
+    {
+      "name": "aapl_signed_volume_surge",
+      "lesson": "It was largely a rescaled copy of AAPL_return_1d (0.85 similarity), so it added noise rather than information."
+    },
+    {
+      "name": "nvda_qqq_volume_ratio_change",
+      "lesson": "Relative NVDA-vs-QQQ volume activity gave RF some information in 2023 and 2025 but is regime dependent, so it works best only as a partner of the relative-move factor."
+    },
+    {
+      "name": "aapl_rel_peer_volume_gap",
+      "lesson": "The 3-day Apple-vs-peer gap is the most robust idea so far, helping both models in three years, but it failed in the trending 2024 where relative moves persisted."
+    },
+    {
+      "name": "msft_lead_qqq_residual",
+      "lesson": "MSFT's residual vs QQQ is mostly noise and overlaps MSFT_return_1d, so it hurt in 2022 and 2024."
+    }
+  ],
+  "factors": [
+    {
+      "name": "aapl_rel_peer_5d_vol_scaled",
+      "mode": "improve",
+      "parent": "aapl_rel_peer_volume_gap",
+      "role": "relative_move",
+      "formula": "safe_divide(subtract(pct_change(AAPL_Close, 5), multiply(add(pct_change(MSFT_Close, 5), pct_change(NVDA_Close, 5)), 0.5)), rolling_std(pct_change(AAPL_Close, 1), 20))",
+      "hypothesis": "The 3d gap failed in 2024 when the vol regime was low and gaps small in scale; scaling by Apple's 20d vol and using a 5d window makes the relative signal comparable across regimes."
+    },
+    {
+      "name": "nvda_qqq_volume_gap_smooth",
+      "mode": "improve",
+      "parent": "nvda_qqq_volume_ratio_change",
+      "role": "market_condition",
+      "formula": "subtract(safe_divide(rolling_mean(NVDA_Volume, 5), rolling_mean(NVDA_Volume, 60)), safe_divide(rolling_mean(QQQ_Volume, 5), rolling_mean(QQQ_Volume, 60)))",
+      "hypothesis": "The one-day volume ratio is noisy and flipped in 2022 and 2024; using 5d over 60d averages gives a smoother measure of speculative tech attention."
+    },
+    {
+      "name": "aapl_vs_qqq_3d_gap",
+      "mode": "new",
+      "parent": "",
+      "role": "relative_move",
+      "formula": "subtract(pct_change(AAPL_Close, 3), pct_change(QQQ_Close, 3))",
+      "hypothesis": "The multi-day Apple minus QQQ gap is a short-term mean-reversion signal against the index, analogous to the peer gap that worked, but with a different benchmark."
+    },
+    {
+      "name": "qqq_range_expansion",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "safe_divide(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), rolling_mean(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 20))",
+      "hypothesis": "The market's intraday range relative to its norm describes stress/regime state; high stress days tend to be followed by rebounds, which the existing Apple-only features miss."
+    },
+    {
+      "name": "aapl_peer_gap_regime_interaction",
+      "mode": "partner",
+      "parent": "aapl_rel_peer_volume_gap",
+      "role": "market_condition",
+      "formula": "multiply(subtract(pct_change(AAPL_Close, 3), multiply(add(pct_change(MSFT_Close, 3), pct_change(NVDA_Close, 3)), 0.5)), safe_divide(rolling_std(pct_change(QQQ_Close, 1), 5), rolling_std(pct_change(QQQ_Close, 1), 20)))",
+      "hypothesis": "Relative-move reversion should be stronger when the market is in a rising-vol state; this interaction conditions the parent on QQQ vol regime so the two give more than the sum."
+    },
+    {
+      "name": "nvda_msft_lead_5d_spread",
+      "mode": "partner",
+      "parent": "nvda_qqq_volume_ratio_change",
+      "role": "peer_lead",
+      "formula": "subtract(pct_change(NVDA_Close, 3), pct_change(MSFT_Close, 3))",
+      "hypothesis": "The 3-day NVDA-minus-MSFT spread shows which direction the tech leaders are rotating (risk-on vs defensive), complementing the NVDA volume-attention state to predict whether Apple follows."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 12258,
+    "output_tokens": 1932
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

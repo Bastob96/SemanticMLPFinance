@@ -1,0 +1,54 @@
+{
+  "reflection": "replay of 20261015_1635_claude, round 1",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "vol_ratio_5_20",
+      "mode": "improve",
+      "parent": "AAPL_volatility_10d",
+      "formula": "safe_divide(rolling_std(pct_change(AAPL_Close, 1), 5), rolling_std(pct_change(AAPL_Close, 1), 20))",
+      "hypothesis": "Short-vs-long volatility ratio captures vol regime shifts that precede mean reversion or rebounds.",
+      "role": ""
+    },
+    {
+      "name": "msft_return_zscore_20",
+      "mode": "improve",
+      "parent": "MSFT_return_1d",
+      "formula": "zscore(pct_change(MSFT_Close, 1), 20)",
+      "hypothesis": "MSFT move relative to its recent volatility is a cleaner lead signal for AAPL than the raw return.",
+      "role": ""
+    },
+    {
+      "name": "aapl_cum20_vol_adj",
+      "mode": "improve",
+      "parent": "AAPL_cum_return_20d",
+      "formula": "safe_divide(pct_change(AAPL_Close, 20), rolling_std(pct_change(AAPL_Close, 1), 20))",
+      "hypothesis": "Volatility-adjusted momentum is more stable across regimes than raw 20d return.",
+      "role": ""
+    },
+    {
+      "name": "close_position_in_range",
+      "mode": "new",
+      "parent": "",
+      "formula": "safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low))",
+      "hypothesis": "Closing near the day's high or low indicates intraday buying/selling pressure that may continue or revert next day.",
+      "role": ""
+    },
+    {
+      "name": "overnight_gap",
+      "mode": "new",
+      "parent": "",
+      "formula": "subtract(safe_divide(AAPL_Open, lag(AAPL_Close, 1)), 1)",
+      "hypothesis": "Overnight gap reflects news sentiment and tends to partially reverse or continue the next day.",
+      "role": ""
+    },
+    {
+      "name": "volume_price_agreement",
+      "mode": "new",
+      "parent": "",
+      "formula": "multiply(sign(pct_change(AAPL_Close, 1)), pct_change(AAPL_Volume, 1))",
+      "hypothesis": "Price moves on rising volume are more informative than those on falling volume, giving continuation or exhaustion signals.",
+      "role": ""
+    }
+  ]
+}

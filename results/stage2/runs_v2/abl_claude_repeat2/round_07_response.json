@@ -1,0 +1,85 @@
+{
+  "reflection": "The notebook shows that 3d Apple-vs-peer gaps help in 2022, 2023, 2025 but fail in 2024, and that aapl_msft_gap_trend_agree (gap times 20d gap) is the strongest new-information factor, especially in 2025 and with RF and LR both gaining. Its failures were 2022 and 2024, so I'll try variants that scale by volatility to tame heavy tails and use different horizons. Single-day Apple candle and overnight factors keep failing, so I'll avoid them. I'll test MSFT-only gap persistence with different windows, a 10d/60d trend-agreement variant, and new ideas on QQQ-relative trend and volume-return interactions. Partners focus on market-condition state for the trend-agree factor.",
+  "lessons": [
+    {
+      "name": "aapl_peer_gap_5d_regime_interaction",
+      "lesson": "A 2d gap scaled by QQQ 3d/60d vol was too close to the team's regime interaction (0.76) and failed in 2024, so it added little new."
+    },
+    {
+      "name": "aapl_msft_gap_trend_agree",
+      "lesson": "Product of short and 20d Apple-vs-MSFT gaps captures persistent relative-strength regimes and helped both models in 2023 and 2025, but it flipped in 2022 and 2024 probably due to heavy-tailed products."
+    },
+    {
+      "name": "aapl_overnight_vs_qqq_overnight",
+      "lesson": "Overnight relative gap helped only LR and lost badly in 2024, so overnight noise is not predictive for RF."
+    },
+    {
+      "name": "aapl_down_volume_pressure",
+      "lesson": "Volume-weighted mean return was a near-copy of the 5d mean return (0.98), so it added nothing."
+    },
+    {
+      "name": "qqq_range_vs_aapl_range_gap",
+      "lesson": "Range expansion differences between Apple and QQQ were noisy and hurt LR strongly, as range ratios have unstable scale across regimes."
+    },
+    {
+      "name": "nvda_msft_spread_apple_gap_product",
+      "lesson": "Multiplying the NVDA-MSFT spread by the sign of Apple's gap discarded magnitude and hurt in 2022, so the interaction was noise."
+    }
+  ],
+  "factors": [
+    {
+      "name": "aapl_msft_gap_trend_agree_vol_scaled",
+      "mode": "improve",
+      "parent": "aapl_msft_gap_trend_agree",
+      "role": "relative_move",
+      "formula": "multiply(subtract(pct_change(AAPL_Close, 3), pct_change(MSFT_Close, 3)), safe_divide(subtract(pct_change(AAPL_Close, 20), pct_change(MSFT_Close, 20)), rolling_std(pct_change(AAPL_Close, 1), 20)))",
+      "hypothesis": "The raw product failed in high-vol 2022 because the 20d gap scales with volatility; dividing the long gap by Apple's 20d vol makes the agreement signal comparable across regimes."
+    },
+    {
+      "name": "aapl_msft_gap_10d_60d_hybrid",
+      "mode": "improve",
+      "parent": "aapl_msft_gap_trend_agree",
+      "role": "relative_move",
+      "formula": "multiply(subtract(pct_change(AAPL_Close, 5), pct_change(MSFT_Close, 5)), subtract(pct_change(AAPL_Close, 10), pct_change(MSFT_Close, 10)))",
+      "hypothesis": "Using 5d and 10d gaps gives a faster agreement signal that may adapt to the shifting leadership in 2022 and 2024 where the 20d horizon was stale."
+    },
+    {
+      "name": "aapl_qqq_trend_gap_agree",
+      "mode": "new",
+      "parent": "",
+      "role": "relative_move",
+      "formula": "multiply(subtract(pct_change(AAPL_Close, 5), pct_change(QQQ_Close, 5)), subtract(pct_change(AAPL_Close, 20), pct_change(QQQ_Close, 20)))",
+      "hypothesis": "The same persistent-relative-strength product but versus QQQ rather than MSFT; if relative-strength agreement is real it should work against the index too."
+    },
+    {
+      "name": "nvda_return_volume_surprise",
+      "mode": "new",
+      "parent": "",
+      "role": "peer_lead",
+      "formula": "multiply(pct_change(NVDA_Close, 1), safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 20)))",
+      "hypothesis": "NVDA moves on abnormally high volume signal sector-wide conviction that may spill over into Apple the next day, unlike plain returns."
+    },
+    {
+      "name": "qqq_trend_strength_for_gap",
+      "mode": "partner",
+      "parent": "aapl_msft_gap_trend_agree",
+      "role": "market_condition",
+      "formula": "safe_divide(pct_change(QQQ_Close, 10), rolling_std(pct_change(QQQ_Close, 1), 20))",
+      "hypothesis": "A vol-normalised QQQ 10d trend describes the market state in which relative-strength persistence works (2025) versus fails (2022, 2024), complementing the Apple-MSFT gap."
+    },
+    {
+      "name": "aapl_msft_corr_break_gap",
+      "mode": "partner",
+      "parent": "aapl_peer_gap_regime_interaction",
+      "role": "relative_move",
+      "formula": "multiply(subtract(pct_change(AAPL_Close, 1), pct_change(MSFT_Close, 1)), safe_divide(rolling_std(pct_change(MSFT_Close, 1), 5), rolling_std(pct_change(MSFT_Close, 1), 20)))",
+      "hypothesis": "Today's Apple-vs-MSFT gap weighted by MSFT's short/long vol ratio gives a relative move conditioned on a tech-leader regime, complementing the QQQ-regime-based team factor."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 20304,
+    "output_tokens": 2026
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

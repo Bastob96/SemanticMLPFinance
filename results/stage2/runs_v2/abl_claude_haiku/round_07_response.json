@@ -1,0 +1,85 @@
+{
+  "reflection": "Volume-surge signals (AAPL vs NVDA, NVDA alone, QQQ alone) helped in 2023 and 2025 but missed in 2022 and 2024, and most gains are small and Random Forest-only, so none has cleared the team bar. The misses look driven by a few extreme volume spikes and by ignoring market direction, while smoothing and longer baselines did not fix them. Next I will compress extreme spikes with a log transform, test whether overnight QQQ gaps and range surges carry new peer information, and pair range-based Apple/MSFT measures with volume signals.",
+  "lessons": [
+    {
+      "name": "nvda_volume_surge_smooth",
+      "lesson": "Smoothing NVDA volume over 5 days lost the sharp same-day spike signal and missed badly in 2024, so averaging the volume did not help."
+    },
+    {
+      "name": "aapl_volume_surge_smooth_minus_qqq",
+      "lesson": "Replacing the daily volume ratios with 5-day averages removed the timing information and the result flipped sign across years, so it was rejected."
+    },
+    {
+      "name": "peer_range_ratio_msft_nvda",
+      "lesson": "The MSFT-to-NVDA range ratio helped in three years and both models, but its gain is too small to trust and it did not help in 2024."
+    },
+    {
+      "name": "aapl_volume_change_3d",
+      "lesson": "A 3-day percent change in AAPL volume is noisy and lacks a direction or baseline, so it helped in only two years and neither model."
+    },
+    {
+      "name": "aapl_volume_surge_vs_nvda",
+      "lesson": "The relative AAPL-minus-NVDA volume surge helped in 2023 and 2025 but missed in 2022 and 2024, probably because the raw ratio is driven by extreme spikes."
+    },
+    {
+      "name": "aapl_range_surge",
+      "lesson": "The Apple range surge helped in 2023 and 2025 but its gain is tiny and it overlaps with AAPL_daily_range, so it carries little independent information."
+    }
+  ],
+  "factors": [
+    {
+      "name": "nvda_volume_surge_log",
+      "mode": "improve",
+      "parent": "nvda_volume_surge",
+      "role": "peer_lead",
+      "formula": "log(safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 20)))",
+      "hypothesis": "The parent missed in 2022 and 2024 probably because a few extreme NVDA volume spikes dominate the linear scale; a log transform compresses those spikes so the signal reflects typical surges rather than outliers."
+    },
+    {
+      "name": "aapl_volume_surge_vs_nvda_log",
+      "mode": "improve",
+      "parent": "aapl_volume_surge_vs_nvda",
+      "role": "relative_move",
+      "formula": "subtract(log(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20))), log(safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 20))))",
+      "hypothesis": "The parent's gap is driven by extreme ratio spikes in either stock; taking logs of each ratio before subtracting makes the relative surge symmetric and less dominated by one-day outliers, which may fix the 2022 and 2024 misses."
+    },
+    {
+      "name": "qqq_overnight_gap_1d",
+      "mode": "new",
+      "parent": "",
+      "role": "peer_lead",
+      "formula": "safe_divide(subtract(QQQ_Open, lag(QQQ_Close, 1)), lag(QQQ_Close, 1))",
+      "hypothesis": "The overnight gap in QQQ reflects news that arrives before the open and can lead Apple's next-day move; it is a QQQ-based measure, unlike the rejected Apple overnight gap."
+    },
+    {
+      "name": "qqq_range_surge",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "safe_divide(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), rolling_mean(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 20))",
+      "hypothesis": "A same-day jump in the market's range relative to its own 20-day norm signals a shift in market regime that a plain 10-day range average did not capture."
+    },
+    {
+      "name": "aapl_msft_range_ratio",
+      "mode": "partner",
+      "parent": "peer_range_ratio_msft_nvda",
+      "role": "relative_move",
+      "formula": "safe_divide(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), safe_divide(subtract(MSFT_High, MSFT_Low), MSFT_Close))",
+      "hypothesis": "Pairing the MSFT-NVDA range ratio with Apple's range relative to MSFT isolates whether Apple itself is more volatile than its megacap peer, which may sharpen the market-level range signal."
+    },
+    {
+      "name": "aapl_range_volatility_10d",
+      "mode": "partner",
+      "parent": "nvda_volume_surge",
+      "role": "apple_own",
+      "formula": "rolling_std(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 10)",
+      "hypothesis": "Pairing NVDA's volume surge with the variability of Apple's own daily range tests whether peer volume spikes matter more when Apple's intraday risk is already elevated."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 16790,
+    "output_tokens": 4668
+  },
+  "_model": "claude-haiku-5-5",
+  "_stop_reason": "tool_use"
+}

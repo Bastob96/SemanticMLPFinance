@@ -1,0 +1,85 @@
+{
+  "reflection": "Volume-contrast factors keep helping in 2023 and 2025 and losing in 2022 and 2024, with both models helped. Range scaling plus QQQ volume-vs-move divergence gives the best pairs, 0.03-0.04 and 4/4 years, but the pair bonus over the sum is only about 0.005-0.009, just short of the 0.010 bar. Dollar-volume and MSFT variants did not add anything. 2024 is the regime where all of these lose (calm uptrend, low volatility). This round I will try making the signals regime-aware, for example by scaling against a longer-window baseline or conditioning on trend. I will also try a few volume-free ideas that use price structure.",
+  "lessons": [
+    {
+      "name": "aapl_vs_qqq_volume_range_scaled",
+      "lesson": "Range scaling of the AAPL-vs-QQQ contrast overlapped with the NVDA range-scaled team member (similarity 0.49), so it added little on the team and still lost in 2022 and 2024."
+    },
+    {
+      "name": "qqq_volume_vs_move_divergence_60d",
+      "lesson": "Using range with a 60d baseline weakened the divergence signal, and 2024 lost heavily (-0.044), so the slow window removed the useful short-term stress information."
+    },
+    {
+      "name": "aapl_dollar_volume_vs_qqq_dollar_volume",
+      "lesson": "Dollar-volume z-scores mostly repeat the share-volume contrast (similarity 0.50 with the team factor), so they were regime-dependent and the pair gave no synergy."
+    },
+    {
+      "name": "aapl_range_vs_volume_efficiency",
+      "lesson": "Subtracting volume z from range z gave a signal that is inverted relative to the useful volume-contrast factors and lacked any cross-asset reference, so it helped neither model."
+    },
+    {
+      "name": "aapl_nvda_volume_range_scaled_x_qqq_div",
+      "lesson": "QQQ volume against absolute move size, scaled by QQQ's range, was the best single alone gain (+0.021) with big 2025 gains, but it lost in 2024, and its pairs help without a clear synergy bonus."
+    },
+    {
+      "name": "msft_volume_vs_aapl_volume_range_scaled",
+      "lesson": "MSFT volume is too similar to Apple's own volume pattern, so the contrast carried no new information and hurt in 3 years."
+    }
+  ],
+  "factors": [
+    {
+      "name": "qqq_volume_move_divergence_range_scaled_60d_vol",
+      "mode": "improve",
+      "parent": "aapl_nvda_volume_range_scaled_x_qqq_div",
+      "role": "market_condition",
+      "formula": "safe_divide(subtract(zscore(QQQ_Volume, 20), zscore(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 20)), add(rolling_std(pct_change(QQQ_Close, 1), 60), 0.004))",
+      "hypothesis": "The parent failed in 2024, a calm regime, because its range scaling does not adapt to the regime. Using the QQQ range z-score as the move measure and 60d QQQ volatility as the scaler should boost the signal in stress periods and damp it in calm ones."
+    },
+    {
+      "name": "aapl_vs_qqq_volume_surge_60d_base_trend_gated",
+      "mode": "improve",
+      "parent": "aapl_vs_qqq_volume_surge_60d_base",
+      "role": "relative_move",
+      "formula": "multiply(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), subtract(1, abs(sign(subtract(safe_divide(QQQ_Close, rolling_mean(QQQ_Close, 60)), 1)))))",
+      "hypothesis": "This parent lost in 2022 and 2024, the strongly trending years. I tried to gate it, but the formula collapses to zero except when QQQ sits exactly on its 60d mean, so the gate will not work as intended. The alternative is a smooth gating by 1/(1+|trend|), which needs division, so this is a coarse test of whether zeroing the signal in trends helps."
+    },
+    {
+      "name": "aapl_close_location_vs_qqq_volume_weighted",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "safe_divide(subtract(multiply(2, AAPL_Close), add(AAPL_High, AAPL_Low)), subtract(AAPL_High, AAPL_Low))",
+      "hypothesis": "Signed close location between -1 and +1 combined with intraday structure is different from the plain close position already tried. The hope is that the centered version gives a cleaner mean-reversion signal for the linear model."
+    },
+    {
+      "name": "nvda_vs_qqq_volume_range_divergence",
+      "mode": "new",
+      "parent": "",
+      "role": "peer_lead",
+      "formula": "safe_divide(subtract(zscore(NVDA_Volume, 20), zscore(QQQ_Volume, 20)), add(safe_divide(subtract(NVDA_High, NVDA_Low), NVDA_Close), 0.01))",
+      "hypothesis": "NVDA attention relative to the market, scaled by NVDA's own range, may lead tech risk appetite and so Apple's next move. It is new because it uses NVDA's range for scaling."
+    },
+    {
+      "name": "aapl_volume_range_scaled_vs_qqq_up_move",
+      "mode": "partner",
+      "parent": "aapl_nvda_volume_range_scaled_x_qqq_div",
+      "role": "relative_move",
+      "formula": "safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 20)), add(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 0.005))",
+      "hypothesis": "This is an Apple-relative-volume partner scaled by the QQQ range, to match the parent's QQQ range scaling. The market-condition parent says what QQQ stress is, and this one says whether Apple's volume is out of line with it."
+    },
+    {
+      "name": "aapl_range_share_of_qqq_range_x_volume_gap",
+      "mode": "partner",
+      "parent": "aapl_vs_nvda_volume_surge_range_scaled",
+      "role": "market_condition",
+      "formula": "multiply(safe_divide(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), add(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 0.002)), subtract(zscore(QQQ_Volume, 20), zscore(QQQ_Volume, 60)))",
+      "hypothesis": "The team factor is Apple-centric, and this adds the market state: Apple's range relative to QQQ's, weighted by whether QQQ volume is rising versus its slower baseline. It is meant to give interaction information that the team factor lacks."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 26008,
+    "output_tokens": 2361
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

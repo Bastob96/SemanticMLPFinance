@@ -1,0 +1,62 @@
+{
+  "reflection": "replay of abl_claude_haiku, round 8",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "qqq_gap_scaled_by_qqq_vol",
+      "mode": "improve",
+      "parent": "qqq_overnight_gap_1d",
+      "role": "peer_lead",
+      "formula": "safe_divide(safe_divide(subtract(QQQ_Open, lag(QQQ_Close, 1)), lag(QQQ_Close, 1)), rolling_std(pct_change(QQQ_Close, 1), 20))",
+      "hypothesis": "The raw QQQ gap was too large in high-volatility regimes (missing in 2022 and 2024), so dividing by QQQ's own 20-day volatility should put the gap on a comparable scale across regimes and make it steadier."
+    },
+    {
+      "name": "nvda_volume_surge_60d_log",
+      "mode": "improve",
+      "parent": "nvda_volume_surge_log",
+      "role": "peer_lead",
+      "formula": "log(safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 60)))",
+      "hypothesis": "The 20-day NVDA baseline is pulled up by recent spikes, causing the 2024 miss; a 60-day baseline should measure abnormal volume against a slower norm and reduce these false surges."
+    },
+    {
+      "name": "msft_overnight_gap_1d",
+      "mode": "new",
+      "parent": "",
+      "role": "peer_lead",
+      "formula": "safe_divide(subtract(MSFT_Open, lag(MSFT_Close, 1)), lag(MSFT_Close, 1))",
+      "hypothesis": "MSFT's overnight gap reflects news that reaches the large-cap tech complex before Apple opens, a different peer timing signal from the QQQ gap."
+    },
+    {
+      "name": "aapl_close_location_1d",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low))",
+      "hypothesis": "Where Apple closed within its daily range shows whether buyers or sellers controlled the last hour, which may carry short-term continuation information."
+    },
+    {
+      "name": "peer_volume_surge_sum",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "add(log(safe_divide(MSFT_Volume, rolling_mean(MSFT_Volume, 20))), log(safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 20))))",
+      "hypothesis": "Combined abnormal volume across the two megacap peers measures market-wide participation, which may mark stronger moves in the next session in a way that a single-stock volume signal cannot."
+    },
+    {
+      "name": "aapl_close_loc_with_nvda_volume",
+      "mode": "partner",
+      "parent": "nvda_volume_surge_log",
+      "role": "apple_own",
+      "formula": "multiply(safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low)), log(safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 20))))",
+      "hypothesis": "Abnormal NVDA volume carries a direction-blind signal; weighting it by where Apple closed in its range tags the volume with whether buyers or sellers dominated, giving a complementary Apple-own view."
+    },
+    {
+      "name": "aapl_minus_qqq_gap_1d",
+      "mode": "partner",
+      "parent": "qqq_overnight_gap_1d",
+      "role": "relative_move",
+      "formula": "subtract(safe_divide(subtract(AAPL_Open, lag(AAPL_Close, 1)), lag(AAPL_Close, 1)), safe_divide(subtract(QQQ_Open, lag(QQQ_Close, 1)), lag(QQQ_Close, 1)))",
+      "hypothesis": "The difference between Apple's and QQQ's overnight gaps isolates Apple-specific overnight news, which should complement the market-level QQQ gap by separating stock-specific from index-wide moves."
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "reflection": "Volume-ratio signals (AAPL vs NVDA, z-scored) are the only consistent winners; they help RF in 2022/2023/2025 but 2024 is the persistent failure year. Close-location and QQQ volume surge help in 2023 and 2025 only. Range/ratio and gap factors fail, so I will stop those. This round I will try other normalisations of the volume ratio (rank-like, change rather than level), AAPL-vs-QQQ volume, and pair them with close-location and the QQQ trend, all of which are low-correlated with the existing factors.",
+  "lessons": [
+    {
+      "name": "log_aapl_msft_volume_ratio_z20",
+      "lesson": "AAPL/MSFT volume ratio lacks the NVDA component (NVDA is the high-attention, high-volume stock), so it did not capture the same relative-attention signal and failed in three years."
+    },
+    {
+      "name": "log_aapl_nvda_volume_ratio_z10",
+      "lesson": "A shorter 10d window is nearly a duplicate of the 20d version (0.90) and its gains come in the same years, so it mostly adds value only when paired with a different-type factor."
+    },
+    {
+      "name": "nvda_close_loc_minus_aapl_close_loc",
+      "lesson": "Single-day close-location differences are noisy intraday information that hurt both models; smoothing was needed."
+    },
+    {
+      "name": "qqq_range_z20_minus_aapl_range_z20",
+      "lesson": "Difference of range z-scores is noisy and collinear with existing range/volatility factors, and hurt badly in 2025."
+    },
+    {
+      "name": "aapl_range_vs_qqq_range_ratio",
+      "lesson": "Ratio of ranges is unstable and overlaps with the existing range factors, giving no consistent direction."
+    },
+    {
+      "name": "aapl_gap_fill_residual_3d",
+      "lesson": "Mean intraday return over 3 days is almost AAPL_mean_return_3d (0.82), so it only added noise."
+    }
+  ],
+  "factors": [
+    {
+      "name": "log_aapl_nvda_volume_ratio_change_5d",
+      "mode": "improve",
+      "parent": "log_aapl_nvda_volume_ratio_z20",
+      "role": "relative_move",
+      "formula": "diff(zscore(log(safe_divide(AAPL_Volume, NVDA_Volume)), 20), 5)",
+      "hypothesis": "The z20 level failed in 2024 perhaps because the level drifts; the 5-day change in the standardized ratio captures shifts in relative attention and is less similar to the existing level factor."
+    },
+    {
+      "name": "log_aapl_qqq_volume_ratio_z20",
+      "mode": "improve",
+      "parent": "qqq_msft_volume_ratio_z20",
+      "role": "relative_move",
+      "formula": "zscore(log(safe_divide(AAPL_Volume, QQQ_Volume)), 20)",
+      "hypothesis": "The AAPL-vs-NVDA volume ratio works; replacing the denominator with QQQ volume measures Apple-specific attention versus market volume and may be less regime-dependent than QQQ/MSFT."
+    },
+    {
+      "name": "nvda_aapl_return_gap_vol_scaled",
+      "mode": "new",
+      "parent": "",
+      "role": "peer_lead",
+      "formula": "safe_divide(subtract(pct_change(NVDA_Close, 3), pct_change(AAPL_Close, 3)), rolling_std(pct_change(NVDA_Close, 1), 20))",
+      "hypothesis": "NVDA's 3-day outperformance versus Apple scaled by NVDA volatility measures how stretched the leader is; Apple may catch up or reverse, and the scaling makes it comparable across regimes."
+    },
+    {
+      "name": "aapl_down_day_volume_share_10d",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "safe_divide(rolling_sum(multiply(AAPL_Volume, subtract(AAPL_Close, AAPL_Open)), 10), rolling_sum(multiply(AAPL_Volume, AAPL_Close), 10))",
+      "hypothesis": "Volume-weighted intraday direction over 10 days measures sustained buying or selling pressure (accumulation vs distribution), which is different from return-based factors."
+    },
+    {
+      "name": "qqq_close_loc_5d_mean",
+      "mode": "partner",
+      "parent": "aapl_close_loc_5d_mean",
+      "role": "market_condition",
+      "formula": "rolling_mean(safe_divide(subtract(QQQ_Close, QQQ_Low), subtract(QQQ_High, QQQ_Low)), 5)",
+      "hypothesis": "Smoothed QQQ close location describes where the market is closing in its range; combined with Apple's own smoothed close location it separates market-driven from Apple-specific buying pressure."
+    },
+    {
+      "name": "aapl_minus_qqq_volume_surge_gap",
+      "mode": "partner",
+      "parent": "log_aapl_nvda_volume_ratio_z10",
+      "role": "market_condition",
+      "formula": "subtract(subtract(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20)), 1), subtract(safe_divide(QQQ_Volume, rolling_mean(QQQ_Volume, 20)), 1))",
+      "hypothesis": "Complements the AAPL/NVDA volume ratio by measuring Apple's own volume surge relative to market-wide volume surge, separating idiosyncratic from market stress."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 19408,
+    "output_tokens": 1871
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

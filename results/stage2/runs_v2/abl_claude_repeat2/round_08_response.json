@@ -1,0 +1,85 @@
+{
+  "reflection": "The notebook shows that most factors help in 2023 and 2025 but flip in 2024 (trending, low-vol year) and sometimes 2022. aapl_msft_gap_trend_agree is the best promising factor (big 2025 gains), but heavy-tailed raw products probably cause the 2022/2024 flips. Scaling by Apple vol did not fix it. I will try rank-like/bounded versions (sign times magnitude, zscore) and new ideas around MSFT-specific relationships, volume-price divergences, and QQQ-based market state. I will also pair the MSFT gap factor with bounded market-state partners.",
+  "lessons": [
+    {
+      "name": "aapl_msft_gap_trend_agree_vol_scaled",
+      "lesson": "Dividing the 20d gap by Apple vol kept the 2023/2025 gains but still failed in 2022 and 2024, so heavy tails were not the main problem and the regime dependence remains."
+    },
+    {
+      "name": "aapl_msft_gap_10d_60d_hybrid",
+      "lesson": "The 5d x 10d gap product overlaps too much in horizon, helping LR in 2022/2023 but flipping in 2024/2025, so horizon separation matters."
+    },
+    {
+      "name": "aapl_qqq_trend_gap_agree",
+      "lesson": "The same agreement idea against QQQ only helped LR and in 2023, showing the MSFT-specific gap carries the information, not generic market-relative gaps."
+    },
+    {
+      "name": "nvda_return_volume_surprise",
+      "lesson": "Multiplying NVDA return by a volume ratio left it a 0.99 copy of the return because the return's scale dominates the product."
+    },
+    {
+      "name": "qqq_trend_strength_for_gap",
+      "lesson": "A QQQ 10d trend-to-vol ratio is just a rescaled market momentum that hurt in three years and carried no unique signal despite pairing slightly with the MSFT gap."
+    },
+    {
+      "name": "aapl_msft_corr_break_gap",
+      "lesson": "A 1d Apple-MSFT gap scaled by MSFT vol ratio is a near-copy of the existing 1d relative factor and added only noise."
+    }
+  ],
+  "factors": [
+    {
+      "name": "aapl_msft_gap_sign_agree_mag",
+      "mode": "improve",
+      "parent": "aapl_msft_gap_trend_agree",
+      "role": "relative_move",
+      "formula": "multiply(sign(subtract(pct_change(AAPL_Close, 20), pct_change(MSFT_Close, 20))), subtract(pct_change(AAPL_Close, 3), pct_change(MSFT_Close, 3)))",
+      "hypothesis": "The raw product of two gaps is heavy-tailed and flips in 2022/2024; keeping only the sign of the 20d gap gives a bounded trend-conditioned short gap (continuation vs reversal) that should be more stable."
+    },
+    {
+      "name": "aapl_msft_gap_trend_agree_zscore",
+      "mode": "improve",
+      "parent": "aapl_msft_gap_trend_agree_vol_scaled",
+      "role": "relative_move",
+      "formula": "zscore(subtract(pct_change(AAPL_Close, 20), pct_change(MSFT_Close, 20)), 60)",
+      "hypothesis": "The 20d Apple-MSFT gap relative to its own 60d distribution removes regime-scale differences between 2022 and 2024, giving a stationary relative strength state."
+    },
+    {
+      "name": "aapl_volume_price_divergence_5d",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "subtract(zscore(pct_change(AAPL_Close, 5), 60), zscore(rolling_mean(AAPL_Volume, 5), 60))",
+      "hypothesis": "Price rising while volume is relatively low (or the opposite) signals weak conviction and mean reversion; a normalized divergence is regime-neutral."
+    },
+    {
+      "name": "qqq_down_day_share_10d_vs_aapl",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "subtract(rolling_mean(pct_change(QQQ_Close, 1), 10), rolling_mean(pct_change(AAPL_Close, 1), 10))",
+      "hypothesis": "The 10d mean-return lag of Apple vs QQQ captures whether Apple is catching up to the sector, a slower-moving relative state than the 1d and 5d factors."
+    },
+    {
+      "name": "qqq_range_ratio_for_msft_gap",
+      "mode": "partner",
+      "parent": "aapl_msft_gap_trend_agree",
+      "role": "market_condition",
+      "formula": "safe_divide(subtract(QQQ_High, QQQ_Low), rolling_mean(subtract(QQQ_High, QQQ_Low), 60))",
+      "hypothesis": "The MSFT gap factor works in high-vol 2025 and not calm 2024; a QQQ range expansion state lets the model switch the gap's meaning by market turbulence."
+    },
+    {
+      "name": "msft_nvda_volume_pulse_for_gap",
+      "mode": "partner",
+      "parent": "aapl_msft_gap_trend_agree",
+      "role": "peer_lead",
+      "formula": "subtract(safe_divide(MSFT_Volume, rolling_mean(MSFT_Volume, 20)), safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20)))",
+      "hypothesis": "When MSFT trades unusually heavily relative to Apple, MSFT's move carries more information, making the Apple-MSFT gap more or less likely to persist; this complements the price gap."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 22207,
+    "output_tokens": 1917
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

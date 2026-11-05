@@ -1,0 +1,9 @@
+round,team_size,joined,promising,pairs_tried,pairs_joined,mean_alone_gain,team,seconds
+1,0,0,0,0,0,-0.004176014114473183,,25.8
+2,0,0,4,6,0,0.0009307870601029279,,42.8
+3,0,0,7,6,0,0.0012680034958647644,,42.9
+4,3,3,6,5,1,-0.0018572137078371037,log_aapl_nvda_volume_ratio_z20|nvda_range_vs_aapl_range|qqq_volume_surge_peer,65.6
+5,3,0,9,6,0,-0.0006874228061887807,log_aapl_nvda_volume_ratio_z20|nvda_range_vs_aapl_range|qqq_volume_surge_peer,67.7
+6,3,0,10,6,0,-0.002403885631986648,log_aapl_nvda_volume_ratio_z20|nvda_range_vs_aapl_range|qqq_volume_surge_peer,67.6
+7,3,0,12,6,0,-0.0027893433943625666,log_aapl_nvda_volume_ratio_z20|nvda_range_vs_aapl_range|qqq_volume_surge_peer,57.7
+8,4,1,16,6,0,0.004341126409940351,log_aapl_nvda_volume_ratio_z20|nvda_range_vs_aapl_range|qqq_volume_surge_peer|msft_nvda_volume_ratio_z20,83.1

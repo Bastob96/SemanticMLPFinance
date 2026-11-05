@@ -1,0 +1,54 @@
+{
+  "reflection": "template formulas (no LLM)",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "template_331556",
+      "mode": "improve",
+      "parent": "",
+      "role": "",
+      "formula": "rolling_mean(multiply(sign(pct_change(QQQ_Close, 1)), zscore(QQQ_Volume, 20)), 10)",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_273145",
+      "mode": "improve",
+      "parent": "",
+      "role": "",
+      "formula": "subtract(safe_divide(AAPL_Close, rolling_max(AAPL_High, 3)), 1)",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_880899",
+      "mode": "new",
+      "parent": "",
+      "role": "",
+      "formula": "rolling_mean(multiply(sign(pct_change(NVDA_Close, 1)), zscore(NVDA_Volume, 3)), 60)",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_517553",
+      "mode": "new",
+      "parent": "",
+      "role": "",
+      "formula": "subtract(safe_divide(MSFT_Close, rolling_max(MSFT_High, 10)), 1)",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_912755",
+      "mode": "partner",
+      "parent": "template_346236",
+      "role": "",
+      "formula": "safe_divide(rolling_std(pct_change(AAPL_Close, 1), 5), rolling_std(pct_change(NVDA_Close, 1), 5))",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_842368",
+      "mode": "partner",
+      "parent": "template_849574",
+      "role": "",
+      "formula": "subtract(pct_change(QQQ_Close, 10), pct_change(MSFT_Close, 10))",
+      "hypothesis": "template formula (no LLM)"
+    }
+  ]
+}

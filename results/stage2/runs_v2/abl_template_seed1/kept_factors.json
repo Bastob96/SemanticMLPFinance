@@ -1,0 +1,32 @@
+[
+  {
+    "name": "template_889508",
+    "formula": "rolling_mean(multiply(sign(pct_change(NVDA_Close, 1)), zscore(NVDA_Volume, 5)), 3)",
+    "hypothesis": "template formula (no LLM)",
+    "round": 3,
+    "how_selected": "team trial, round 3",
+    "auc_gain": 0.013983614690935647,
+    "years_helped": 3,
+    "team_gain": 0.013983614690935647
+  },
+  {
+    "name": "template_887302",
+    "formula": "safe_divide(rolling_std(pct_change(NVDA_Close, 1), 20), rolling_std(pct_change(MSFT_Close, 1), 20))",
+    "hypothesis": "template formula (no LLM)",
+    "round": 3,
+    "how_selected": "pair trial with template_467022, round 3",
+    "auc_gain": 0.004830295095640369,
+    "years_helped": 2,
+    "team_gain": -0.0028913080383668535
+  },
+  {
+    "name": "template_467022",
+    "formula": "subtract(pct_change(MSFT_Close, 3), pct_change(NVDA_Close, 3))",
+    "hypothesis": "template formula (no LLM)",
+    "round": 1,
+    "how_selected": "pair trial with template_887302, round 3",
+    "auc_gain": 0.011159370698213412,
+    "years_helped": 2,
+    "team_gain": 0.006159921972741705
+  }
+]

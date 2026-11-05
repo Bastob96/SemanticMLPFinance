@@ -1,0 +1,85 @@
+{
+  "reflection": "Across rounds, factors help in 2023 and 2025 but hurt in 2024 (and often 2022), mostly via Random Forest. Volume-based factors (nvda_volume_surge_lead, qqq_volume_surge_peer) and smoothed close location are the best, but their sign appears regime dependent. Pairs add roughly the sum of their parts, so no real synergy yet. I will try to make volume factors regime-robust (e.g. relative to volatility, rank-like via zscore, log ratios to reduce skew) and test new ideas like intraday-vs-overnight decomposition, down-volume asymmetry, and peer range/volatility.",
+  "lessons": [
+    {
+      "name": "qqq_volume_surge_signed_5d",
+      "lesson": "Signing the QQQ volume surge by one-day direction duplicated QQQ_return_1d information and removed the unsigned stress signal, so it lost the 2025 gain."
+    },
+    {
+      "name": "aapl_close_loc_10d_centered",
+      "lesson": "A 10-day window averages away the short-term close-location signal, so the effect vanished in most years."
+    },
+    {
+      "name": "aapl_high_low_reversal_5d",
+      "lesson": "It is a stochastic-style position largely duplicating close_to_ma20 (0.84), giving no new directional information."
+    },
+    {
+      "name": "aapl_volume_price_pressure",
+      "lesson": "Signed volume surge was close to zero overall and flipped between years, as the volume signal only matters in turbulent regimes and the sign multiplier added noise."
+    },
+    {
+      "name": "nvda_volume_surge_lead",
+      "lesson": "Apple's volume relative to NVDA's helped RF in 2023 and 2025 but not 2022 and 2024, suggesting a nonlinear regime-dependent signal that is skewed by volume spikes."
+    },
+    {
+      "name": "qqq_trend_vs_aapl_trend_20d",
+      "lesson": "It overlaps with AAPL 20d momentum (0.58) and only helped RF in 2023 and 2025, too small to separate from noise."
+    }
+  ],
+  "factors": [
+    {
+      "name": "log_aapl_nvda_volume_ratio_z20",
+      "mode": "improve",
+      "parent": "nvda_volume_surge_lead",
+      "role": "relative_move",
+      "formula": "zscore(log(safe_divide(AAPL_Volume, NVDA_Volume)), 20)",
+      "hypothesis": "The raw volume surge difference is dominated by spikes and regime scale; a log ratio z-scored over 20 days is scale-free and less skewed, which should stabilise the 2022/2024 failures."
+    },
+    {
+      "name": "aapl_close_loc_3d_mean",
+      "mode": "improve",
+      "parent": "aapl_close_loc_5d_mean",
+      "role": "apple_own",
+      "formula": "rolling_mean(safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low)), 3)",
+      "hypothesis": "The 5d mean helped in 2023/2025 but 10d lost the signal; a shorter 3d window may catch sharper short-term buying/selling pressure and reduce overlap with 5d return."
+    },
+    {
+      "name": "aapl_intraday_minus_overnight_5d",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "rolling_sum(subtract(safe_divide(AAPL_Close, AAPL_Open), safe_divide(AAPL_Open, lag(AAPL_Close, 1))), 5)",
+      "hypothesis": "Splitting returns into intraday versus overnight over 5 days captures who controls the move (retail/day vs institutional/overnight), distinct from close-to-close returns."
+    },
+    {
+      "name": "nvda_range_vs_aapl_range",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "subtract(safe_divide(subtract(NVDA_High, NVDA_Low), NVDA_Close), multiply(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 2))",
+      "hypothesis": "Tech risk appetite shows up in NVDA's intraday range relative to Apple's; when NVDA ranges widen much more than Apple's, Apple may catch up or rebound next day."
+    },
+    {
+      "name": "qqq_range_expansion_vs_aapl_volume",
+      "mode": "partner",
+      "parent": "nvda_volume_surge_lead",
+      "role": "market_condition",
+      "formula": "safe_divide(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), rolling_mean(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 20))",
+      "hypothesis": "Volume surge relative to NVDA may matter only when the market is in range expansion; QQQ range relative to its 20d average describes that condition and complements the volume factor."
+    },
+    {
+      "name": "aapl_msft_volume_gap_signed_close_loc",
+      "mode": "partner",
+      "parent": "aapl_close_loc_5d_mean",
+      "role": "peer_lead",
+      "formula": "subtract(rolling_mean(safe_divide(subtract(MSFT_Close, MSFT_Low), subtract(MSFT_High, MSFT_Low)), 5), rolling_mean(safe_divide(subtract(NVDA_Close, NVDA_Low), subtract(NVDA_High, NVDA_Low)), 5))",
+      "hypothesis": "Apple's smoothed close location may work better when conditioned on peers' buying pressure; MSFT minus NVDA 5d close location describes peer-lead strength differing from Apple's own."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 12985,
+    "output_tokens": 1934
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

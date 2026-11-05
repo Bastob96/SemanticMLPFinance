@@ -1,0 +1,85 @@
+{
+  "reflection": "Round 1 shows nothing passed: most factors had mixed-sign gains with 2024 consistently negative (worst -0.025 to -0.039), suggesting 2024's calm trending regime punishes features tuned to reversals or intraday location. Features similar to existing ones (zscore of returns, close zscore) add nothing. Peer returns (MSFT_return_1d) are the most useful existing inputs, and Apple's volatility level matters, so I will try features about peer dispersion and volatility regime relative to QQQ, plus smoother, less noisy versions of the 2022/2023 winners. Note the aapl_vol_ratio_5_20 formula actually used a 60 window, so I'll try a real 5/20 ratio with market normalization.",
+  "lessons": [
+    {
+      "name": "aapl_vol_ratio_5_20",
+      "lesson": "Short/long vol ratio mostly duplicates AAPL_volatility_5d and carries no directional information, so it failed in nearly every year."
+    },
+    {
+      "name": "msft_return_zscore_20",
+      "lesson": "Standardizing MSFT's return is nearly a copy of MSFT_return_1d and only helped RF in calm years, with 2024 hurt by noise."
+    },
+    {
+      "name": "aapl_close_zscore_60",
+      "lesson": "A 60-day price z-score is redundant with 20d return and trend features and gave negative gain in every year."
+    },
+    {
+      "name": "qqq_vol_ratio_5_60",
+      "lesson": "QQQ vol-spike ratio only helped in turbulent 2025; in other regimes it was noise for next-day direction."
+    },
+    {
+      "name": "aapl_overnight_gap",
+      "lesson": "Relative overnight gap helped LR in 2023 but was a large negative in 2024, likely because gaps mean-revert inconsistently across regimes."
+    },
+    {
+      "name": "aapl_close_location_minus_qqq",
+      "lesson": "Relative close location is a noisy one-day intraday quantity that flipped sign between 2022-23 and 2024-25."
+    }
+  ],
+  "factors": [
+    {
+      "name": "aapl_gap_rolling_mean_5",
+      "mode": "improve",
+      "parent": "aapl_overnight_gap",
+      "role": "relative_move",
+      "formula": "rolling_mean(subtract(safe_divide(AAPL_Open, lag(AAPL_Close, 1)), safe_divide(QQQ_Open, lag(QQQ_Close, 1))), 5)",
+      "hypothesis": "The single-day relative gap was too noisy and flipped in 2024; averaging over 5 days keeps persistent overnight relative strength and cuts noise."
+    },
+    {
+      "name": "aapl_close_loc_5d_mean",
+      "mode": "improve",
+      "parent": "aapl_close_location_minus_qqq",
+      "role": "apple_own",
+      "formula": "rolling_mean(safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low)), 5)",
+      "hypothesis": "Dropping the QQQ term and smoothing over 5 days gives Apple's buying-pressure trend, avoiding the one-day noise that broke 2024 and 2025."
+    },
+    {
+      "name": "peer_dispersion_1d",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "abs(subtract(pct_change(MSFT_Close, 1), pct_change(NVDA_Close, 1)))",
+      "hypothesis": "When MSFT and NVDA disagree strongly, tech leadership is rotating, which may change how Apple follows the peers the next day."
+    },
+    {
+      "name": "aapl_vs_qqq_vol_20",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "safe_divide(rolling_std(pct_change(AAPL_Close, 1), 20), rolling_std(pct_change(QQQ_Close, 1), 20))",
+      "hypothesis": "Apple's idiosyncratic risk relative to the sector indicates stock-specific stress regimes (e.g. 2025) in which direction behaves differently."
+    },
+    {
+      "name": "msft_nvda_5d_spread_to_aapl",
+      "mode": "partner",
+      "parent": "MSFT_return_1d",
+      "role": "relative_move",
+      "formula": "subtract(pct_change(AAPL_Close, 5), multiply(add(pct_change(MSFT_Close, 5), pct_change(NVDA_Close, 5)), 0.5))",
+      "hypothesis": "MSFT's one-day return is useful; Apple's 5-day lag versus peers adds a catch-up component that complements it as a slower relative move."
+    },
+    {
+      "name": "qqq_volume_surge_peer",
+      "mode": "partner",
+      "parent": "AAPL_volatility_10d",
+      "role": "peer_lead",
+      "formula": "subtract(safe_divide(QQQ_Volume, rolling_mean(QQQ_Volume, 20)), 1)",
+      "hypothesis": "Apple's volatility level is informative; QQQ volume surge identifies whether the volatility is market-wide participation, giving a conditional interaction."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 5977,
+    "output_tokens": 1732
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

@@ -1,0 +1,54 @@
+{
+  "reflection": "replay of abl_claude_nofeedback, round 8",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "aapl_vol10_to_vol20_x_qqq_trend",
+      "mode": "improve",
+      "parent": "aapl_vol10_to_vol20_log",
+      "role": "apple_own",
+      "formula": "multiply(log(safe_divide(rolling_std(pct_change(AAPL_Close, 1), 10), rolling_std(pct_change(AAPL_Close, 1), 20))), sign(subtract(safe_divide(QQQ_Close, rolling_mean(QQQ_Close, 20)), 1)))",
+      "hypothesis": "Vol-ratio direction depends on the market regime; rising Apple vol in an uptrending QQQ differs from a downtrend, so signing by QQQ trend lets linear models use it."
+    },
+    {
+      "name": "msft_ret_rank_vs_own_range",
+      "mode": "improve",
+      "parent": "msft_return_vol_scaled_1d",
+      "role": "peer_lead",
+      "formula": "safe_divide(pct_change(MSFT_Close, 1), safe_divide(subtract(MSFT_High, MSFT_Low), MSFT_Close))",
+      "hypothesis": "MSFT 1d return was useful; scaling by MSFT's same-day range (rather than a slow 60d std) captures how decisive the move was within the day with less lag."
+    },
+    {
+      "name": "aapl_downside_vol_10d",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "rolling_std(multiply(pct_change(AAPL_Close, 1), subtract(1, multiply(add(sign(pct_change(AAPL_Close, 1)), 1), 0.5))), 10)",
+      "hypothesis": "Downside-only volatility measures fear separately from total volatility, which was the most important feature, and may hint at mean reversion after selloffs."
+    },
+    {
+      "name": "aapl_gap_fill_pressure",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "multiply(safe_divide(subtract(AAPL_Open, lag(AAPL_Close, 1)), lag(AAPL_Close, 1)), safe_divide(subtract(AAPL_Close, AAPL_Open), AAPL_Open))",
+      "hypothesis": "Product of overnight gap and intraday return is negative when the day faded the gap; fades may predict continuation or reversal next day."
+    },
+    {
+      "name": "qqq_ret_zscore_20d_regime",
+      "mode": "partner",
+      "parent": "aapl_volatility_10d",
+      "role": "market_condition",
+      "formula": "zscore(pct_change(QQQ_Close, 1), 20)",
+      "hypothesis": "Apple volatility is key; a standardised QQQ shock tells the model whether the market is making abnormal moves, complementing Apple's own vol level."
+    },
+    {
+      "name": "aapl_ret_vs_qqq_vol_scaled",
+      "mode": "partner",
+      "parent": "msft_return_vol_scaled_1d",
+      "role": "relative_move",
+      "formula": "safe_divide(subtract(pct_change(AAPL_Close, 1), pct_change(QQQ_Close, 1)), rolling_std(pct_change(QQQ_Close, 1), 20))",
+      "hypothesis": "Apple's excess move over QQQ scaled by market vol complements the MSFT lead signal, indicating whether Apple lagged or overshot sector direction."
+    }
+  ]
+}

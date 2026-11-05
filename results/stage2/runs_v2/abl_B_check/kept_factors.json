@@ -1,0 +1,42 @@
+[
+  {
+    "name": "nvda_range_vs_aapl_range",
+    "formula": "subtract(safe_divide(subtract(NVDA_High, NVDA_Low), NVDA_Close), safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close))",
+    "hypothesis": "Relative intraday turbulence in NVDA versus AAPL captures sector stress that AAPL has yet to absorb.",
+    "round": 4,
+    "how_selected": "team trial, round 4",
+    "auc_gain": 0.012304897255344834,
+    "years_helped": 3,
+    "team_gain": 0.012304897255344834
+  },
+  {
+    "name": "msft_nvda_close_position_diff",
+    "formula": "subtract(safe_divide(subtract(NVDA_Close, NVDA_Low), subtract(NVDA_High, NVDA_Low)), safe_divide(subtract(MSFT_Close, MSFT_Low), subtract(MSFT_High, MSFT_Low)))",
+    "hypothesis": "Divergence in where peers close within their ranges shows tech-sector intraday sentiment that may lead AAPL.",
+    "round": 8,
+    "how_selected": "team trial, round 8",
+    "auc_gain": 0.01065136199407301,
+    "years_helped": 2,
+    "team_gain": 0.013879305015813977
+  },
+  {
+    "name": "nvda_vol10_minus_aapl_vol10",
+    "formula": "subtract(rolling_std(pct_change(NVDA_Close, 1), 10), rolling_std(pct_change(AAPL_Close, 1), 10))",
+    "hypothesis": "Realised-vol spread between NVDA and AAPL captures relative risk regime that the daily range spread hints at.",
+    "round": 8,
+    "how_selected": "pair trial with nvda_range_vs_qqq_range_zscore, round 8",
+    "auc_gain": 0.0019782451847669517,
+    "years_helped": 2,
+    "team_gain": -0.0013778749312636715
+  },
+  {
+    "name": "nvda_range_vs_qqq_range_zscore",
+    "formula": "zscore(subtract(safe_divide(subtract(NVDA_High, NVDA_Low), NVDA_Close), safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close)), 20)",
+    "hypothesis": "NVDA range relative to the market range, standardised, measures speculative excess in tech and affects next-day AAPL direction.",
+    "round": 5,
+    "how_selected": "pair trial with nvda_vol10_minus_aapl_vol10, round 8",
+    "auc_gain": 0.008962962655417898,
+    "years_helped": 4,
+    "team_gain": 0.004199402916634384
+  }
+]

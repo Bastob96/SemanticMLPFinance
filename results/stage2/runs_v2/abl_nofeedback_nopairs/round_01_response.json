@@ -1,0 +1,54 @@
+{
+  "reflection": "replay of abl_claude_nofeedback, round 1",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "aapl_vol10_to_vol60_ratio",
+      "mode": "improve",
+      "parent": "AAPL_volatility_10d",
+      "role": "apple_own",
+      "formula": "safe_divide(rolling_std(pct_change(AAPL_Close, 1), 10), rolling_std(pct_change(AAPL_Close, 1), 60))",
+      "hypothesis": "Raw 10d vol is useful but depends on the year's volatility level. Normalizing by 60d vol gives a regime-stable vol-spike signal that should carry across years."
+    },
+    {
+      "name": "msft_return_zscore_20d",
+      "mode": "improve",
+      "parent": "MSFT_return_1d",
+      "role": "peer_lead",
+      "formula": "zscore(pct_change(MSFT_Close, 1), 20)",
+      "hypothesis": "MSFT's raw 1d return is scaled differently across vol regimes. Standardizing it by recent vol makes the move comparable across years."
+    },
+    {
+      "name": "aapl_overnight_gap",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "safe_divide(subtract(AAPL_Open, lag(AAPL_Close, 1)), lag(AAPL_Close, 1))",
+      "hypothesis": "The overnight gap is separate from the intraday move and may show reversal or continuation. Today's close is not in the existing factors in this form."
+    },
+    {
+      "name": "aapl_close_location_in_range",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low))",
+      "hypothesis": "Where the close sits in the day's range captures end-of-day buying or selling pressure, which may carry into the next day."
+    },
+    {
+      "name": "qqq_vol_ratio_5_20",
+      "mode": "partner",
+      "parent": "AAPL_volatility_10d",
+      "role": "market_condition",
+      "formula": "safe_divide(rolling_std(pct_change(QQQ_Close, 1), 5), rolling_std(pct_change(QQQ_Close, 1), 20))",
+      "hypothesis": "Market-wide vol expansion complements Apple's own vol. Apple's vol only matters in the context of whether the whole market is in stress."
+    },
+    {
+      "name": "aapl_minus_msft_5d_relative",
+      "mode": "partner",
+      "parent": "MSFT_return_1d",
+      "role": "relative_move",
+      "formula": "subtract(pct_change(AAPL_Close, 5), pct_change(MSFT_Close, 5))",
+      "hypothesis": "MSFT's 1d move leads Apple, and Apple's 5d lag behind MSFT shows catch-up potential. The two together separate leading information from relative mispricing."
+    }
+  ]
+}

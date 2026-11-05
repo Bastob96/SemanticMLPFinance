@@ -1,0 +1,85 @@
+{
+  "reflection": "Volume-contrast factors dominate the notebook: they help in 2023 and 2025 and lose in 2022 and 2024, and the team now has three of them. Price-based and sign-based factors (overnight, sign consistency, signed gaps) were rejected, so they add noise. The R15 team joiners were the vol-scaled variants, which suggests that scaling by a volatility regime reduces the 2024 losses. This round I will try volume contrasts with other normalizers (a ratio of short to long QQQ volatility, MSFT as a baseline), and a few new angles that are not simple volume z-scores: a price-volume interaction using range expansion, and a volume-trend acceleration. I will also add partners that combine QQQ volume divergence with Apple-specific relative state.",
+  "lessons": [
+    {
+      "name": "qqq_volume_move_divergence_vol_regime_gated",
+      "lesson": "Dividing QQQ volume-vs-move divergence by QQQ's 20d volatility damped high-vol stretches and made it a team member, though 2022 and 2024 still lacked gains."
+    },
+    {
+      "name": "aapl_vs_qqq_volume_surge_vs_vol_ratio",
+      "lesson": "Multiplying the AAPL-vs-QQQ volume gap by Apple's short/long volatility ratio gave an interaction that helped all four years on the team, so conditioning on a volatility regime adds real information."
+    },
+    {
+      "name": "aapl_overnight_vs_intraday_20d",
+      "lesson": "Smoothed overnight versus intraday drift is a slow price pattern with no volume context and it hurt both models, especially in 2024."
+    },
+    {
+      "name": "aapl_return_sign_consistency_10d",
+      "lesson": "Sign-count differences throw away magnitude and mostly repeat existing return-mean factors, so they added only noise."
+    },
+    {
+      "name": "qqq_range_expansion_x_aapl_volume_gap",
+      "lesson": "As written it was only QQQ range expansion, with no real volume gap term, so it was a plain volatility-state proxy that hurt in 2022, 2024 and 2025."
+    },
+    {
+      "name": "aapl_minus_qqq_return_x_volume_gap_signed",
+      "lesson": "Multiplying a sign by the volume gap made a binary-flipping feature that overfit and lost in 3 of 4 years, so direction-signed volume does not work here."
+    }
+  ],
+  "factors": [
+    {
+      "name": "qqq_volume_move_divergence_vol_ratio_gated",
+      "mode": "improve",
+      "parent": "qqq_volume_move_divergence_vol_regime_gated",
+      "role": "market_condition",
+      "formula": "multiply(safe_divide(subtract(zscore(QQQ_Volume, 20), zscore(abs(pct_change(QQQ_Close, 1)), 20)), add(rolling_std(pct_change(QQQ_Close, 1), 20), 0.004)), safe_divide(rolling_std(pct_change(QQQ_Close, 1), 5), add(rolling_std(pct_change(QQQ_Close, 1), 60), 0.002)))",
+      "hypothesis": "The parent lost in 2024 and 2022 because the divergence signal matters mainly when short-term volatility is rising. Multiplying by QQQ's 5d/60d volatility ratio, which worked for the Apple version, should emphasize those episodes."
+    },
+    {
+      "name": "aapl_vs_msft_volume_surge_vs_vol_ratio",
+      "mode": "improve",
+      "parent": "aapl_vs_qqq_volume_surge_vs_vol_ratio",
+      "role": "relative_move",
+      "formula": "multiply(subtract(zscore(AAPL_Volume, 20), zscore(MSFT_Volume, 60)), safe_divide(rolling_std(pct_change(AAPL_Close, 1), 5), add(rolling_std(pct_change(AAPL_Close, 1), 60), 0.002)))",
+      "hypothesis": "Using MSFT volume as the baseline instead of QQQ gives a mega-cap comparison that is less correlated with the QQQ factors on the team, while keeping the volatility-ratio gate that gave 4/4 years."
+    },
+    {
+      "name": "aapl_volume_acceleration_vs_range_trend",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "subtract(zscore(rolling_mean(AAPL_Volume, 5), 60), zscore(rolling_mean(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 5), 60))",
+      "hypothesis": "Apple volume building over a week without a matching range expansion indicates quiet accumulation or distribution. This differs from the single-day z-scores already tried."
+    },
+    {
+      "name": "qqq_short_vs_long_vol_x_aapl_beta_gap",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "multiply(safe_divide(rolling_std(pct_change(QQQ_Close, 1), 10), add(rolling_std(pct_change(QQQ_Close, 1), 60), 0.002)), subtract(rolling_mean(pct_change(AAPL_Close, 1), 10), rolling_mean(pct_change(QQQ_Close, 1), 10)))",
+      "hypothesis": "When market volatility is elevated, Apple's 10d relative drift versus QQQ may mean-revert or persist differently than in calm periods. This is a price-based regime interaction, not another volume z-score."
+    },
+    {
+      "name": "aapl_range_scaled_qqq_volume_gap_vs_msft",
+      "mode": "partner",
+      "parent": "qqq_volume_move_divergence_vol_regime_gated",
+      "role": "relative_move",
+      "formula": "safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(MSFT_Volume, 20)), add(rolling_std(pct_change(QQQ_Close, 1), 20), 0.004))",
+      "hypothesis": "The team's QQQ divergence factor describes market stress. This Apple-vs-MSFT volume gap, scaled by the same QQQ volatility regime, describes Apple's relative attention within that regime and should add something on top of it."
+    },
+    {
+      "name": "msft_volume_vs_price_divergence_range_scaled",
+      "mode": "partner",
+      "parent": "aapl_vs_nvda_volume_surge_range_scaled",
+      "role": "peer_lead",
+      "formula": "safe_divide(subtract(zscore(MSFT_Volume, 20), zscore(abs(pct_change(MSFT_Close, 1)), 20)), add(safe_divide(subtract(MSFT_High, MSFT_Low), MSFT_Close), 0.005))",
+      "hypothesis": "The QQQ volume-vs-move divergence worked as a market factor. The same construction on MSFT gives a peer-lead version that complements Apple's own range-scaled volume contrast."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 30218,
+    "output_tokens": 2360
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

@@ -1,0 +1,85 @@
+{
+  "reflection": "Volume-based relative/market factors (AAPL/NVDA volume ratio, QQQ volume surge) are the only ones that have joined; most other factors help in 2023 and 2025 but hurt in 2022 and 2024, suggesting regime dependence. Close-location and range factors help mainly in 2025 and RF. Longer windows (z60, 5/60 trends) were near-copies or worse, so I will stay with short windows and try different normalisations. I will try volume ratios against other peers (MSFT), rank-like transforms of volume, and cross-asset range/close-location signals that avoid sign-flip issues in 2022 and 2024.",
+  "lessons": [
+    {
+      "name": "qqq_volume_surge_5d_smooth",
+      "lesson": "Smoothing the QQQ volume surge over 5/60 days kept the 2023 and 2025 gains but still hurt in 2022 and 2024, so it adds little beyond the 20d version."
+    },
+    {
+      "name": "log_aapl_nvda_volume_ratio_z60",
+      "lesson": "A 60-day z-score is nearly the same as the 20-day one (0.91 similarity) and lost 2024 badly, so the longer window brings nothing."
+    },
+    {
+      "name": "aapl_range_zscore_20",
+      "lesson": "Standardized Apple range is close to daily range and helped only on top of the team in LR, a weak regime-dependent signal."
+    },
+    {
+      "name": "qqq_msft_volume_ratio_z20",
+      "lesson": "QQQ/MSFT volume ratio carries mostly the same stress information as QQQ volume surge and added nothing on the team."
+    },
+    {
+      "name": "aapl_volume_trend_5_60",
+      "lesson": "Apple's own volume trend is a slow variable that duplicates volume_to_ma20 and hurt in 2022, giving no directional edge."
+    },
+    {
+      "name": "aapl_minus_qqq_5d_vs_volume_z",
+      "lesson": "Multiplying a relative return by a volume z-score created a noisy interaction that failed in nearly every year."
+    }
+  ],
+  "factors": [
+    {
+      "name": "log_aapl_msft_volume_ratio_z20",
+      "mode": "improve",
+      "parent": "log_aapl_nvda_volume_ratio_z20",
+      "role": "relative_move",
+      "formula": "zscore(log(safe_divide(AAPL_Volume, MSFT_Volume)), 20)",
+      "hypothesis": "The AAPL/NVDA log volume ratio z-score worked, but 2024 failed possibly due to NVDA-specific volume; MSFT is a steadier mega-cap comparator and may give the same relative-attention signal more stably."
+    },
+    {
+      "name": "log_aapl_nvda_volume_ratio_z10",
+      "mode": "improve",
+      "parent": "log_aapl_nvda_volume_ratio_z20",
+      "role": "relative_move",
+      "formula": "zscore(log(safe_divide(AAPL_Volume, NVDA_Volume)), 10)",
+      "hypothesis": "A shorter 10-day standardization adapts faster to regime shifts (2024 failure) while remaining distinct from the 20d and 60d versions."
+    },
+    {
+      "name": "nvda_close_loc_minus_aapl_close_loc",
+      "mode": "new",
+      "parent": "",
+      "role": "peer_lead",
+      "formula": "subtract(safe_divide(subtract(NVDA_Close, NVDA_Low), subtract(NVDA_High, NVDA_Low)), safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low)))",
+      "hypothesis": "If NVDA closed near its high while Apple closed weak, Apple may catch up or lag next day; the intraday buying pressure gap between leader and Apple is a new cross-asset signal."
+    },
+    {
+      "name": "qqq_range_z20_minus_aapl_range_z20",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "subtract(zscore(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 20), zscore(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 20))",
+      "hypothesis": "Whether Apple's intraday turbulence is unusual relative to the market's own turbulence flags idiosyncratic stress that tends to mean-revert."
+    },
+    {
+      "name": "aapl_range_vs_qqq_range_ratio",
+      "mode": "partner",
+      "parent": "qqq_volume_surge_peer",
+      "role": "relative_move",
+      "formula": "safe_divide(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close))",
+      "hypothesis": "QQQ volume surge flags market stress; Apple's range relative to QQQ's says whether Apple is amplifying or damping that stress, complementing the volume signal."
+    },
+    {
+      "name": "aapl_gap_fill_residual_3d",
+      "mode": "partner",
+      "parent": "nvda_range_vs_aapl_range",
+      "role": "apple_own",
+      "formula": "rolling_mean(subtract(safe_divide(AAPL_Close, AAPL_Open), 1), 3)",
+      "hypothesis": "Average intraday (open-to-close) return over 3 days describes Apple's own recent session drift, which together with the sector-vs-Apple range gap may separate trending from choppy turbulence."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 17620,
+    "output_tokens": 1870
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

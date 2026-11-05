@@ -1,0 +1,17 @@
+round,team_size,joined,promising,pairs_tried,pairs_joined,mean_alone_gain,team,seconds
+1,0,0,1,0,0,-0.0036096006804126,,24.2
+2,0,0,3,3,0,-0.0001492731479943,,31.5
+3,0,0,5,6,0,0.0002379812542056,,41.6
+4,0,0,8,6,0,0.0009390398396952,,41.8
+5,0,0,9,6,0,-0.0039497878092826,,43.6
+6,0,0,9,1,0,-0.0053619761200483,,29.8
+7,0,0,12,6,0,0.0023735866766557,,43.5
+8,0,0,14,6,0,0.0008498037170511,,48.3
+9,0,0,17,6,0,0.002686999124419208,,56.5
+10,0,0,19,6,0,-0.0017780871681127373,,48.6
+11,1,1,20,6,0,-0.001107281406194446,aapl_vs_nvda_volume_surge_range_scaled,77.2
+12,1,0,24,6,0,0.005444857592795578,aapl_vs_nvda_volume_surge_range_scaled,69.1
+13,1,0,27,6,0,0.002429572949074233,aapl_vs_nvda_volume_surge_range_scaled,63.3
+14,1,0,29,6,0,-0.0005092456119470083,aapl_vs_nvda_volume_surge_range_scaled,64.4
+15,3,2,29,1,0,-0.00162091626285999,aapl_vs_nvda_volume_surge_range_scaled|qqq_volume_move_divergence_vol_regime_gated|aapl_vs_qqq_volume_surge_vs_vol_ratio,84.4
+16,3,0,29,0,0,-0.005365196309090161,aapl_vs_nvda_volume_surge_range_scaled|qqq_volume_move_divergence_vol_regime_gated|aapl_vs_qqq_volume_surge_vs_vol_ratio,43.7

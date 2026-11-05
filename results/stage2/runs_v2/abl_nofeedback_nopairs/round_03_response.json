@@ -1,0 +1,54 @@
+{
+  "reflection": "replay of abl_claude_nofeedback, round 3",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "aapl_minus_msft_5d_vol_scaled_z",
+      "mode": "improve",
+      "parent": "aapl_minus_msft_5d_vol_scaled",
+      "role": "relative_move",
+      "formula": "zscore(subtract(pct_change(AAPL_Close, 5), pct_change(MSFT_Close, 5)), 60)",
+      "hypothesis": "The raw spread has a regime-dependent scale; a 60d z-score normalizes it against its own history and captures stretched relative moves that mean-revert."
+    },
+    {
+      "name": "qqq_vol_ratio_5_60_signed",
+      "mode": "improve",
+      "parent": "qqq_vol_ratio_5_20",
+      "role": "market_condition",
+      "formula": "multiply(safe_divide(rolling_std(pct_change(QQQ_Close, 1), 5), rolling_std(pct_change(QQQ_Close, 1), 60)), sign(pct_change(QQQ_Close, 5)))",
+      "hypothesis": "The vol ratio alone is unsigned; multiplying by QQQ's 5d direction separates panic selloffs, which tend to bounce, from calm rallies."
+    },
+    {
+      "name": "aapl_range_expansion_z",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "zscore(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 20)",
+      "hypothesis": "Range relative to its own 20d norm flags abnormal-volatility days, which often precede reversal or continuation depending on regime."
+    },
+    {
+      "name": "aapl_drawdown_from_20d_high",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "subtract(safe_divide(AAPL_Close, rolling_max(AAPL_High, 20)), 1)",
+      "hypothesis": "Distance below the recent high measures oversold state and may give a nonlinear mean-reversion signal that random forest can use."
+    },
+    {
+      "name": "nvda_minus_qqq_3d_lead",
+      "mode": "partner",
+      "parent": "qqq_vol_ratio_5_20",
+      "role": "peer_lead",
+      "formula": "subtract(rolling_mean(pct_change(NVDA_Close, 1), 3), rolling_mean(pct_change(QQQ_Close, 1), 3))",
+      "hypothesis": "NVDA's leadership over the index combined with the QQQ vol state indicates risk appetite in tech, which may spill over into Apple."
+    },
+    {
+      "name": "aapl_gap_vs_qqq_gap",
+      "mode": "partner",
+      "parent": "peer_dispersion_1d",
+      "role": "relative_move",
+      "formula": "subtract(safe_divide(subtract(AAPL_Open, lag(AAPL_Close, 1)), lag(AAPL_Close, 1)), safe_divide(subtract(QQQ_Open, lag(QQQ_Close, 1)), lag(QQQ_Close, 1)))",
+      "hypothesis": "Apple's overnight gap relative to QQQ's isolates Apple-specific news, and it complements the peer disagreement measure of market state."
+    }
+  ]
+}

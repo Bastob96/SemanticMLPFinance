@@ -1,0 +1,54 @@
+{
+  "reflection": "template formulas (no LLM)",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "template_25379",
+      "mode": "improve",
+      "parent": "",
+      "role": "",
+      "formula": "safe_divide(subtract(NVDA_Close, NVDA_Open), subtract(NVDA_High, NVDA_Low))",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_510574",
+      "mode": "improve",
+      "parent": "",
+      "role": "",
+      "formula": "zscore(MSFT_Volume, 10)",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_635518",
+      "mode": "new",
+      "parent": "",
+      "role": "",
+      "formula": "safe_divide(rolling_std(pct_change(NVDA_Close, 1), 60), rolling_std(pct_change(MSFT_Close, 1), 60))",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_703134",
+      "mode": "new",
+      "parent": "",
+      "role": "",
+      "formula": "safe_divide(rolling_std(pct_change(AAPL_Close, 1), 5), rolling_std(pct_change(QQQ_Close, 1), 5))",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_179003",
+      "mode": "partner",
+      "parent": "template_323365",
+      "role": "",
+      "formula": "rolling_mean(multiply(sign(pct_change(AAPL_Close, 1)), zscore(AAPL_Volume, 5)), 60)",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_960912",
+      "mode": "partner",
+      "parent": "template_749890",
+      "role": "",
+      "formula": "subtract(pct_change(AAPL_Close, 3), pct_change(NVDA_Close, 3))",
+      "hypothesis": "template formula (no LLM)"
+    }
+  ]
+}

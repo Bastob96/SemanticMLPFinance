@@ -1,0 +1,85 @@
+{
+  "reflection": "Across the notebook, the only signal with some life is QQQ volume surge (helped 2023 and 2025, hurt 2022 and 2024, helped both models), so volume information looks useful but unsigned. Most peer-return and relative-move ideas restate existing 1-5 day return factors (similarity 0.7 to 0.97) and fail in 2024, the year with the regime shift. Scaling or standardizing an existing factor has not helped. Next I will try direction-aware volume, a gap scaled by the day's range to reduce regime sensitivity, and genuinely new information: where QQQ closed within its own daily range, and Apple's 5-day move scaled by its volatility. I will also pair volume and volatility factors with different roles.",
+  "lessons": [
+    {
+      "name": "aapl_intraday_range_smooth_10d",
+      "lesson": "A 10-day average of Apple's daily range nearly duplicated AAPL_volatility_10d (0.73) and failed in every year, so it added no new information."
+    },
+    {
+      "name": "msft_cum_return_10d",
+      "lesson": "A 10-day MSFT return duplicated the 5-day MSFT return (0.71) and only helped in 2025, so the longer window added nothing stable."
+    },
+    {
+      "name": "qqq_volume_to_ma20",
+      "lesson": "QQQ volume surge carries some signal (helped 2023 and 2025), but it ignores whether the market moved up or down, which probably explains its misses in 2022 and 2024."
+    },
+    {
+      "name": "aapl_intraday_return",
+      "lesson": "Open-to-close Apple return was nearly the same as AAPL_return_1d (0.80), so it carried little new information and helped only in some years."
+    },
+    {
+      "name": "aapl_rel_qqq_cum_10d",
+      "lesson": "The 10-day Apple-minus-QQQ spread was too similar to AAPL_mean_return_10d (0.59) and its sign flipped between years, so it gave no stable edge."
+    },
+    {
+      "name": "qqq_vol_20d",
+      "lesson": "20-day QQQ volatility mostly restated AAPL_volatility_20d and its one large 2024 miss (-0.039) outweighed its small gains in 2023 and 2025."
+    }
+  ],
+  "factors": [
+    {
+      "name": "qqq_signed_volume_surge",
+      "mode": "improve",
+      "parent": "qqq_volume_to_ma20",
+      "role": "market_condition",
+      "formula": "multiply(sign(pct_change(QQQ_Close, 1)), subtract(safe_divide(QQQ_Volume, rolling_mean(QQQ_Volume, 20)), 1))",
+      "hypothesis": "The parent ignored direction, so heavy volume on down days and heavy volume on up days had the same sign; multiplying by the sign of QQQ's daily return makes it a volume-confirmed move, which should separate the 2022 and 2024 misses from the 2023 and 2025 gains."
+    },
+    {
+      "name": "aapl_gap_scaled_by_range",
+      "mode": "improve",
+      "parent": "aapl_overnight_gap_1d",
+      "role": "apple_own",
+      "formula": "safe_divide(subtract(AAPL_Open, lag(AAPL_Close, 1)), subtract(AAPL_High, AAPL_Low))",
+      "hypothesis": "The parent gap was in percent, so it swung with Apple's volatility regime (strong in 2022, negative in 2024); dividing the gap by the day's high-low range measures the gap in units of the day's own range, which should be more stable across regimes."
+    },
+    {
+      "name": "aapl_5d_return_vol_scaled",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "safe_divide(pct_change(AAPL_Close, 5), rolling_std(pct_change(AAPL_Close, 1), 20))",
+      "hypothesis": "A 5-day Apple move scaled by its 20-day volatility gives a risk-adjusted short-term momentum or reversal signal that treats calm and turbulent regimes equally, which the raw percent return does not do."
+    },
+    {
+      "name": "qqq_close_location_1d",
+      "mode": "new",
+      "parent": "",
+      "role": "peer_lead",
+      "formula": "safe_divide(subtract(QQQ_Close, QQQ_Low), subtract(QQQ_High, QQQ_Low))",
+      "hypothesis": "Where QQQ closed within its own daily range (near the high means buyers were in control at the close) is new information that no existing factor measures, and it may lead Apple's next-day open and close."
+    },
+    {
+      "name": "aapl_volume_surge_minus_qqq_surge",
+      "mode": "partner",
+      "parent": "qqq_volume_to_ma20",
+      "role": "relative_move",
+      "formula": "subtract(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20)), safe_divide(QQQ_Volume, rolling_mean(QQQ_Volume, 20)))",
+      "hypothesis": "Pairing the QQQ volume surge with Apple's own volume surge isolates whether Apple's trading is unusually heavy relative to the market, which is a relative-move view that complements the market-level volume factor."
+    },
+    {
+      "name": "nvda_volatility_10d",
+      "mode": "partner",
+      "parent": "AAPL_volatility_10d",
+      "role": "peer_lead",
+      "formula": "rolling_std(pct_change(NVDA_Close, 1), 10)",
+      "hypothesis": "Apple's 10-day volatility works best with a peer's volatility; NVDA is the most volatile AI-linked peer, so its recent volatility may lead Apple's volatility regime and give a peer-based view that does not duplicate Apple's own volatility."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 9720,
+    "output_tokens": 3701
+  },
+  "_model": "claude-haiku-5-5",
+  "_stop_reason": "tool_use"
+}
