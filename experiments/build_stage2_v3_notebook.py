@@ -270,7 +270,7 @@ cells.append(md("""On this one quarter, Leyao's Logistic Regression (0.540) is c
 
 cells.append(md("""## Summary
 
-**What I did.** I took my Stage 2 loop apart and changed one part at a time: feedback off, a smaller model, more rounds, pair trials off, one-at-a-time judging, and template formulas instead of Claude. I also repeated the normal setting three times. That came to 15 runs, all on the same data, the same split, the same rules and the same Python setup, and all tested once on Q4.
+**What I did.** I took my Stage 2 loop apart and changed one part at a time: feedback off, a smaller model, more rounds, pair trials off, one-at-a-time judging, and template formulas instead of Claude. I also repeated the normal setting three times. That came to 14 runs in the table (11 new this week and 3 from October), all on the same data, the same split, the same rules and the same Python setup, and all tested once on Q4.
 
 **What I found.**
 
