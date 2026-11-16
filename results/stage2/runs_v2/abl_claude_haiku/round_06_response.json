@@ -1,0 +1,85 @@
+{
+  "reflection": "Volume-surge factors are the only family with a repeated pattern: they help in 2023 and 2025 and miss in 2022 and 2024, and they help Random Forest more than Logistic Regression. The misses look like noise from single-day volume baselines and from ignoring whether the market rose or fell, so I will test smoother volume baselines and a relative-volume pairing with NVDA. Price-return and gap ideas have mostly been near-copies of existing factors or regime-dependent, so I am moving away from them. Next I will try peer range ratios and Apple's own volume-change dynamics to find signal that is not a restatement of existing volume or volatility features.",
+  "lessons": [
+    {
+      "name": "qqq_volume_ratio_smooth5d",
+      "lesson": "Smoothing the QQQ volume ratio over 5 days removed the daily spikes that had carried the signal, so it lost its small edge and flipped to a negative average gain."
+    },
+    {
+      "name": "aapl_volume_surge_vs_60d_minus_qqq",
+      "lesson": "Using a 60-day volume baseline instead of 20-day helped in 2023 and 2025 but still missed in 2022 and 2024, so the baseline length alone did not fix the direction-blind volume signal."
+    },
+    {
+      "name": "aapl_drawdown_from_20d_high",
+      "lesson": "Its drawdown from the 20-day high was almost a copy of AAPL_close_to_ma20 (similarity 0.91), so it added no new information and its gain was zero."
+    },
+    {
+      "name": "nvda_volume_surge",
+      "lesson": "NVDA's volume surge helped in 2023 and 2025 and was an unreliable, mostly Random Forest-only signal that missed badly in 2024, so it needs a smoother or better-conditioned baseline."
+    },
+    {
+      "name": "aapl_signed_volume_surge",
+      "lesson": "Signing Apple's volume surge by its daily direction added little beyond the unsigned surge, because the direction tag did not separate up days from down days consistently across years."
+    },
+    {
+      "name": "qqq_trend_60d",
+      "lesson": "The 60-day QQQ trend was too similar to existing 20-day trend features and failed badly in 2024, so the longer trend window gave no stable edge."
+    }
+  ],
+  "factors": [
+    {
+      "name": "nvda_volume_surge_smooth",
+      "mode": "improve",
+      "parent": "nvda_volume_surge",
+      "role": "peer_lead",
+      "formula": "subtract(safe_divide(rolling_mean(NVDA_Volume, 5), rolling_mean(NVDA_Volume, 20)), 1)",
+      "hypothesis": "The raw NVDA volume ratio is noisy day to day and missed in 2022 and 2024; averaging the last 5 days of volume against a 20-day baseline should keep the persistent volume-regime shift and drop single-day spikes."
+    },
+    {
+      "name": "aapl_volume_surge_smooth_minus_qqq",
+      "mode": "improve",
+      "parent": "aapl_volume_surge_minus_qqq_surge",
+      "role": "relative_move",
+      "formula": "subtract(safe_divide(rolling_mean(AAPL_Volume, 5), rolling_mean(AAPL_Volume, 20)), safe_divide(rolling_mean(QQQ_Volume, 5), rolling_mean(QQQ_Volume, 20)))",
+      "hypothesis": "The parent's one-day volume ratios were noisy and missed in 2022 and 2024; using 5-day averaged volumes for both Apple and QQQ should measure a steadier relative volume regime that is not swamped by one-day spikes."
+    },
+    {
+      "name": "peer_range_ratio_msft_nvda",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "safe_divide(safe_divide(subtract(MSFT_High, MSFT_Low), MSFT_Close), safe_divide(subtract(NVDA_High, NVDA_Low), NVDA_Close))",
+      "hypothesis": "The ratio of MSFT's daily range to NVDA's shows whether the mega-cap tech group is calm or stressed relative to the high-beta AI leader, a market-state signal not yet tested."
+    },
+    {
+      "name": "aapl_volume_change_3d",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "pct_change(AAPL_Volume, 3)",
+      "hypothesis": "The three-day change in Apple's raw volume captures whether trading interest is building or fading, which is different from the volume-to-moving-average ratio already tested."
+    },
+    {
+      "name": "aapl_volume_surge_vs_nvda",
+      "mode": "partner",
+      "parent": "nvda_volume_surge",
+      "role": "relative_move",
+      "formula": "subtract(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20)), safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 20)))",
+      "hypothesis": "Pairing NVDA's own volume surge with Apple's volume surge relative to NVDA shows whether Apple is attracting more trading than the AI leader, a relative-move angle that complements NVDA's market-level volume signal."
+    },
+    {
+      "name": "aapl_range_surge",
+      "mode": "partner",
+      "parent": "qqq_volume_to_ma20",
+      "role": "apple_own",
+      "formula": "safe_divide(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), rolling_mean(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 20))",
+      "hypothesis": "Apple's daily range relative to its own 20-day average range measures a volatility surge in Apple itself, which should combine with QQQ's volume surge to show when market-wide activity is spilling into Apple."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 14632,
+    "output_tokens": 3700
+  },
+  "_model": "claude-haiku-5-5",
+  "_stop_reason": "tool_use"
+}

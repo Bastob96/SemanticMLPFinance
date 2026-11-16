@@ -1,0 +1,54 @@
+{
+  "reflection": "replay of abl_claude_nofeedback, round 7",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "aapl_vol10_to_vol20_zscore60",
+      "mode": "improve",
+      "parent": "aapl_vol10_to_vol20_log",
+      "role": "apple_own",
+      "formula": "zscore(safe_divide(rolling_std(pct_change(AAPL_Close, 1), 10), rolling_std(pct_change(AAPL_Close, 1), 20)), 60)",
+      "hypothesis": "The raw vol ratio drifts with the volatility regime across years. Z-scoring it over 60 days makes it comparable between years and should stabilise the signal."
+    },
+    {
+      "name": "msft_return_x_aapl_vol10",
+      "mode": "improve",
+      "parent": "msft_return_vol_scaled_1d",
+      "role": "peer_lead",
+      "formula": "safe_divide(pct_change(MSFT_Close, 1), rolling_std(pct_change(AAPL_Close, 1), 10))",
+      "hypothesis": "MSFT's 1-day return is a useful factor, but scaling it by its own 60d volatility may not fit Apple's current regime. Scaling by Apple's 10d volatility ties it to the volatility factor that matters most."
+    },
+    {
+      "name": "aapl_up_day_fraction_10d_proxy",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "rolling_sum(sign(pct_change(AAPL_Close, 1)), 10)",
+      "hypothesis": "The count of up days minus down days over 10 days captures a breadth-of-direction mean-reversion effect that is different from the magnitude-based returns."
+    },
+    {
+      "name": "qqq_range_zscore_20d",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "zscore(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 20)",
+      "hypothesis": "An unusually wide QQQ intraday range signals market stress that can be followed by a rebound or by more selling in Apple."
+    },
+    {
+      "name": "aapl_ret_vs_qqq_beta_residual_5d",
+      "mode": "partner",
+      "parent": "aapl_vol10_to_vol20_zscore60",
+      "role": "relative_move",
+      "formula": "subtract(pct_change(AAPL_Close, 5), multiply(pct_change(QQQ_Close, 5), 0.8))",
+      "hypothesis": "This complements the apple_own volatility regime factor by adding Apple's beta-adjusted 5-day move versus QQQ. The reversal of this move may depend on whether volatility is expanding."
+    },
+    {
+      "name": "nvda_msft_volume_surge_lead",
+      "mode": "partner",
+      "parent": "msft_return_x_aapl_vol10",
+      "role": "market_condition",
+      "formula": "subtract(add(safe_divide(MSFT_Volume, rolling_mean(MSFT_Volume, 20)), safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 20))), multiply(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20)), 2))",
+      "hypothesis": "A peer volume surge relative to Apple's own shows where attention is. It gives context for whether MSFT's return will carry over to Apple."
+    }
+  ]
+}

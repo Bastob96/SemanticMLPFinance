@@ -1,0 +1,32 @@
+[
+  {
+    "name": "nvda_msft_mean_return_3d_minus_aapl",
+    "formula": "subtract(multiply(add(rolling_mean(pct_change(MSFT_Close, 1), 3), rolling_mean(pct_change(NVDA_Close, 1), 3)), 0.5), rolling_mean(pct_change(AAPL_Close, 1), 10))",
+    "hypothesis": "Pairs with the vol-regime factor. Whether Apple lags recent peer strength matters more when vol is elevated, because catch-up or reversal is stronger.",
+    "round": 6,
+    "how_selected": "team trial, round 6",
+    "auc_gain": 0.014705836221181514,
+    "years_helped": 3,
+    "team_gain": 0.014705836221181514
+  },
+  {
+    "name": "aapl_volume_change_x_return_5d",
+    "formula": "multiply(pct_change(AAPL_Close, 5), diff(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20)), 1))",
+    "hypothesis": "A 5-day move accompanied by a rising volume ratio signals conviction or exhaustion. This is a nonlinear interaction the tree model can use.",
+    "round": 6,
+    "how_selected": "pair trial with aapl_vs_peer_3d_relative_strength, round 6",
+    "auc_gain": 0.005700138256883796,
+    "years_helped": 2,
+    "team_gain": -0.0007820198237397796
+  },
+  {
+    "name": "aapl_vs_peer_3d_relative_strength",
+    "formula": "subtract(rolling_mean(pct_change(AAPL_Close, 1), 3), multiply(add(rolling_mean(pct_change(MSFT_Close, 1), 3), rolling_mean(pct_change(NVDA_Close, 1), 3)), 0.5))",
+    "hypothesis": "Apple's 3d lag versus the peer average complements the 1d peer-lead signal: catch-up potential when peers led over a slightly longer window.",
+    "round": 5,
+    "how_selected": "pair trial with aapl_volume_change_x_return_5d, round 6",
+    "auc_gain": 0.008258951637308411,
+    "years_helped": 3,
+    "team_gain": 0.00040142127338418584
+  }
+]

@@ -1,0 +1,85 @@
+{
+  "reflection": "Across 7 rounds, nearly every factor helps in 2023 and 2025 and hurts in 2022 and 2024, so the pattern looks regime-driven. Volume-based relative signals (AAPL vs QQQ/NVDA volume z-scores) are the only ones with consistent gains for both LR and RF, but 2022 and 2024 fail. Price-return variants are near-copies of existing factors. I will try volume signals with trend/volatility conditioning to fix 2022 and 2024, and some new ideas such as lagged and multi-day quantities, range-based peer measures, and volume rank-type features that differ from earlier ones.",
+  "lessons": [
+    {
+      "name": "aapl_vs_nvda_volume_change_1d",
+      "lesson": "One-day log volume change differences helped LR in 3 years but were tiny and RF ignored them, so the signal is weak and mostly linear."
+    },
+    {
+      "name": "aapl_vs_qqq_volume_surge_60d_base",
+      "lesson": "A slower QQQ volume baseline improved the AAPL-vs-QQQ volume contrast slightly and helped both models, but still failed in 2022 and 2024."
+    },
+    {
+      "name": "aapl_down_volume_pressure",
+      "lesson": "Volume-weighted 5d return sum was essentially a copy of AAPL_mean_return_5d, so it added nothing and inherited its regime flipping."
+    },
+    {
+      "name": "aapl_range_expansion_vs_5d",
+      "lesson": "Range relative to its recent average mostly repeats the daily range and only helped RF in calm 2023 and 2025."
+    },
+    {
+      "name": "qqq_trend_regime_20_60",
+      "lesson": "A slow QQQ trend gauge is a level-type feature that drifted across years, badly hurting 2024 and giving no stable signal."
+    },
+    {
+      "name": "aapl_minus_nvda_1d_return",
+      "lesson": "Apple minus NVDA daily return is nearly the same as the existing peer-mean relative factor, so it was redundant and unstable."
+    }
+  ],
+  "factors": [
+    {
+      "name": "aapl_vs_qqq_volume_60d_both",
+      "mode": "improve",
+      "parent": "aapl_vs_qqq_volume_surge_60d_base",
+      "role": "relative_move",
+      "formula": "subtract(zscore(AAPL_Volume, 60), zscore(QQQ_Volume, 60))",
+      "hypothesis": "The 20d-vs-60d mix fails in 2022 and 2024 probably because regimes shift the volume level; using the same 60d window on both sides gives a cleaner relative attention contrast that is less dependent on short bursts."
+    },
+    {
+      "name": "aapl_vs_nvda_volume_surge_vol_scaled",
+      "mode": "improve",
+      "parent": "aapl_volume_vs_peer_volume",
+      "role": "apple_own",
+      "formula": "safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(NVDA_Volume, 20)), add(rolling_std(pct_change(AAPL_Close, 1), 20), 0.005))",
+      "hypothesis": "The volume contrast failed in high-vol 2022 and low-vol 2024 because its effect scales with volatility; dividing by Apple's 20d volatility normalises it across regimes."
+    },
+    {
+      "name": "aapl_close_vs_prior_5d_low_range",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "safe_divide(subtract(AAPL_Close, rolling_min(AAPL_Low, 10)), subtract(rolling_max(AAPL_High, 10), rolling_min(AAPL_Low, 10)))",
+      "hypothesis": "Stochastic-style position within the 10d high-low channel captures overbought or oversold state, which differs from the one-day close position and from MA distance."
+    },
+    {
+      "name": "qqq_down_day_count_10d",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "rolling_mean(sign(pct_change(QQQ_Close, 1)), 10)",
+      "hypothesis": "The fraction of up versus down QQQ days over 10 sessions measures market breadth in direction, not magnitude, and may separate trending from choppy regimes."
+    },
+    {
+      "name": "aapl_lag_return_2d_vs_msft",
+      "mode": "partner",
+      "parent": "aapl_vs_qqq_volume_surge_60d_base",
+      "role": "peer_lead",
+      "formula": "subtract(lag(pct_change(MSFT_Close, 1), 1), lag(pct_change(AAPL_Close, 1), 1))",
+      "hypothesis": "Yesterday's MSFT lead over Apple provides a catch-up signal, which complements a volume attention signal by describing the delayed peer move."
+    },
+    {
+      "name": "qqq_volume_trend_vs_aapl_range",
+      "mode": "partner",
+      "parent": "aapl_volume_vs_peer_volume",
+      "role": "market_condition",
+      "formula": "subtract(zscore(QQQ_Volume, 5), zscore(subtract(QQQ_High, QQQ_Low), 20))",
+      "hypothesis": "Market-wide volume jumps without a matching range expansion indicate quiet accumulation or absorption; this market state complements Apple's volume relative to NVDA."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 18331,
+    "output_tokens": 1799
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

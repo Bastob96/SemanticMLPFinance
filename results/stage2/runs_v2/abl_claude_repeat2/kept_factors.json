@@ -1,0 +1,32 @@
+[
+  {
+    "name": "aapl_peer_gap_regime_interaction",
+    "formula": "multiply(subtract(pct_change(AAPL_Close, 3), multiply(add(pct_change(MSFT_Close, 3), pct_change(NVDA_Close, 3)), 0.5)), safe_divide(rolling_std(pct_change(QQQ_Close, 1), 5), rolling_std(pct_change(QQQ_Close, 1), 20)))",
+    "hypothesis": "Relative-move reversion should be stronger when the market is in a rising-vol state; this interaction conditions the parent on QQQ vol regime so the two give more than the sum.",
+    "round": 4,
+    "how_selected": "team trial, round 4",
+    "auc_gain": 0.012817928554821147,
+    "years_helped": 3,
+    "team_gain": 0.012817928554821147
+  },
+  {
+    "name": "nvda_msft_lead_5d_spread",
+    "formula": "subtract(pct_change(NVDA_Close, 3), pct_change(MSFT_Close, 3))",
+    "hypothesis": "The 3-day NVDA-minus-MSFT spread shows which direction the tech leaders are rotating (risk-on vs defensive), complementing the NVDA volume-attention state to predict whether Apple follows.",
+    "round": 4,
+    "how_selected": "pair trial with nvda_qqq_volume_ratio_change, round 4",
+    "auc_gain": 0.009741188141923457,
+    "years_helped": 1,
+    "team_gain": 0.0010745297789735118
+  },
+  {
+    "name": "nvda_qqq_volume_ratio_change",
+    "formula": "subtract(safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 20)), safe_divide(QQQ_Volume, rolling_mean(QQQ_Volume, 20)))",
+    "hypothesis": "Unusual NVDA trading activity relative to the broad tech market signals sector risk appetite shifts or rotation that may affect Apple the next day.",
+    "round": 3,
+    "how_selected": "pair trial with nvda_msft_lead_5d_spread, round 4",
+    "auc_gain": 0.004346718924724036,
+    "years_helped": 2,
+    "team_gain": -0.001008717057310423
+  }
+]

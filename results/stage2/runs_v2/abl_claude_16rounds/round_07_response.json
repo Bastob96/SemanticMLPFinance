@@ -1,0 +1,85 @@
+{
+  "reflection": "Volume-based factors (Apple volume surge relative to NVDA/QQQ) repeatedly help in 2023 and 2025 but fail in 2022 and 2024; no pair has beaten the sum of its parts. Price-based relative moves and smoothing variants all failed. 2022 (bear, high vol) and 2024 (low vol bull) are the failure regimes, so I will try volume signals that are normalised by regime (longer baseline for Apple only, volume change rather than level) and new ideas using the up/down volume and range-expansion behaviours. Partners should supply a regime descriptor (QQQ trend/vol) to the volume signal.",
+  "lessons": [
+    {
+      "name": "aapl_vs_qqq_volume_surge_5d",
+      "lesson": "Smoothing volume over 5 days against a 60d baseline made a slow level measure that lost the one-day attention spike and hurt in 3 of 4 years."
+    },
+    {
+      "name": "aapl_volume_vs_msft_nvda_volume",
+      "lesson": "Averaging MSFT and NVDA volume z-scores as the benchmark diluted the NVDA-specific contrast and only helped LR, so the signal vanished."
+    },
+    {
+      "name": "aapl_volume_price_range_pressure",
+      "lesson": "Multiplying volume z-score by daily range nearly duplicated volume_to_ma20 and gave strongly negative results in 2024."
+    },
+    {
+      "name": "msft_nvda_minus_qqq_5d",
+      "lesson": "Peer 5d outperformance versus QQQ is largely a rescaled NVDA 5d return and its sign flips across regimes, so it hurt."
+    },
+    {
+      "name": "qqq_return_vs_aapl_vol_state",
+      "lesson": "Dividing QQQ return by its own volatility is a near-copy of QQQ_return_1d and added nothing."
+    },
+    {
+      "name": "aapl_minus_qqq_gap_3d_mean",
+      "lesson": "A 10d mean of Apple minus QQQ daily returns overlaps with Apple's own 10d mean return and its sign flips across regimes."
+    }
+  ],
+  "factors": [
+    {
+      "name": "aapl_vs_nvda_volume_change_1d",
+      "mode": "improve",
+      "parent": "aapl_volume_vs_peer_volume",
+      "role": "apple_own",
+      "formula": "subtract(diff(log(AAPL_Volume), 1), diff(log(NVDA_Volume), 1))",
+      "hypothesis": "The z-score versions depend on the 20d baseline whose scale differs between regimes (2022, 2024); a day-over-day log volume change difference removes the baseline and captures the pure attention shift Apple vs NVDA."
+    },
+    {
+      "name": "aapl_vs_qqq_volume_surge_60d_base",
+      "mode": "improve",
+      "parent": "aapl_vs_qqq_volume_surge",
+      "role": "relative_move",
+      "formula": "subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60))",
+      "hypothesis": "Failures in 2022 and 2024 probably come from both z-scores moving together with market-wide volume; using a slow QQQ baseline retains market-wide volume level info so the difference isolates Apple-specific surge versus the market state."
+    },
+    {
+      "name": "aapl_down_volume_pressure",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "rolling_sum(multiply(pct_change(AAPL_Close, 1), safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20))), 5)",
+      "hypothesis": "Volume-weighted 5d return flow measures accumulation or distribution by Apple holders, which may predict continuation or reversal beyond plain returns."
+    },
+    {
+      "name": "aapl_range_expansion_vs_5d",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "safe_divide(subtract(AAPL_High, AAPL_Low), rolling_mean(subtract(AAPL_High, AAPL_Low), 10))",
+      "hypothesis": "Today's range relative to the recent average range signals volatility expansion or exhaustion, a different view than close-normalised daily range."
+    },
+    {
+      "name": "qqq_trend_regime_20_60",
+      "mode": "partner",
+      "parent": "aapl_volume_vs_peer_volume",
+      "role": "market_condition",
+      "formula": "subtract(safe_divide(rolling_mean(QQQ_Close, 20), rolling_mean(QQQ_Close, 60)), 1)",
+      "hypothesis": "The volume signal flips between bear 2022 and bull years; a QQQ medium-term trend regime variable lets the model condition on that sign flip."
+    },
+    {
+      "name": "aapl_minus_nvda_1d_return",
+      "mode": "partner",
+      "parent": "aapl_vs_qqq_volume_surge",
+      "role": "relative_move",
+      "formula": "subtract(pct_change(AAPL_Close, 1), pct_change(NVDA_Close, 1))",
+      "hypothesis": "Apple's volume surge against the market combined with its same-day return gap versus NVDA, the highest-attention peer, may show whether the volume is rotation flow in or out of Apple."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 16859,
+    "output_tokens": 1777
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

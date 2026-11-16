@@ -1,0 +1,30 @@
+{
+  "rounds": 8,
+  "improve": 2,
+  "new": 2,
+  "partner": 2,
+  "proposer": "template",
+  "replay": null,
+  "model": "claude-sonnet-5-5",
+  "seed": 1,
+  "final_check": false,
+  "out": "results/stage2/runs_v2/abl_template_seed1",
+  "resume": false,
+  "rules": {
+    "min_years": 3,
+    "team_gain": 0.01,
+    "pair_gain": 0.01,
+    "pair_synergy": 0.01,
+    "max_corr": 0.9,
+    "pair_max_corr": 0.7,
+    "team_size": 6,
+    "pairs_per_round": 6,
+    "curve": false,
+    "checks": [
+      "q3"
+    ]
+  },
+  "no_feedback": false,
+  "no_pairs": false,
+  "started": "2026-11-04T23:54:36.831107"
+}

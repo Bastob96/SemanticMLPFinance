@@ -1,0 +1,85 @@
+{
+  "reflection": "Across rounds, nearly every factor helped in 2023 and 2025 but hurt in 2022 and 2024, so gains look regime-dependent (high-vol years vs trending years differ). Volume-based peer info (msft_volume_surge) was the only one helping both models. Unsigned or ratio-type factors failed; near-copies of existing factors get rejected. I will try volume-based variants, volatility-adjusted relative moves (to stabilize across regimes), and new cross-asset features like NVDA/QQQ volume and range-based market stress.",
+  "lessons": [
+    {
+      "name": "aapl_gap_sign_vs_prev_close",
+      "lesson": "Sign of the relative gap was constant/missing in some quarter because the formula degenerated, so it was unusable and sign-only transformations of gaps are fragile."
+    },
+    {
+      "name": "aapl_close_position_zscore_5d",
+      "lesson": "Z-scoring a bounded intraday position over 5 days mostly added noise and removed the level information that gave the small LR gain."
+    },
+    {
+      "name": "aapl_close_vs_20d_high",
+      "lesson": "It is nearly the same as distance to the 20d mean, so it carried no new information and shared its regime-flipping behavior."
+    },
+    {
+      "name": "qqq_close_to_ma20",
+      "lesson": "QQQ trend vs MA is largely redundant with QQQ 5d return and its mean-reversion/momentum sign flips between 2022 bear and other years."
+    },
+    {
+      "name": "aapl_minus_qqq_cum_5d",
+      "lesson": "Relative 5d performance overlaps with Apple's own 5d momentum and its sign flips across regimes, helping only in 2023 and 2025."
+    },
+    {
+      "name": "msft_volume_surge",
+      "lesson": "Unusual MSFT volume is a market-attention proxy that carried slightly new information helping both models, but its effect was unstable in 2022 and 2024."
+    }
+  ],
+  "factors": [
+    {
+      "name": "msft_volume_surge_signed",
+      "mode": "improve",
+      "parent": "msft_volume_surge",
+      "role": "peer_lead",
+      "formula": "multiply(zscore(MSFT_Volume, 20), sign(pct_change(MSFT_Close, 1)))",
+      "hypothesis": "Volume surge without direction was unstable (2022, 2024); signing it by MSFT's return separates high-volume selling from buying, which should transfer to Apple's next move."
+    },
+    {
+      "name": "aapl_minus_qqq_5d_volscaled",
+      "mode": "improve",
+      "parent": "aapl_minus_qqq_cum_5d",
+      "role": "relative_move",
+      "formula": "safe_divide(subtract(pct_change(AAPL_Close, 5), pct_change(QQQ_Close, 5)), rolling_std(pct_change(AAPL_Close, 1), 20))",
+      "hypothesis": "The raw relative move failed in 2024 when vol was low and 2022 when high; scaling by Apple's 20d vol makes it comparable across regimes."
+    },
+    {
+      "name": "nvda_volume_surge",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "zscore(NVDA_Volume, 20)",
+      "hypothesis": "Tech-sector risk appetite shows in NVDA turnover; abnormal NVDA volume may signal sector stress that precedes Apple moves."
+    },
+    {
+      "name": "qqq_range_vs_aapl_range",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "subtract(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close))",
+      "hypothesis": "When Apple's intraday range is wide relative to the market's, Apple-specific noise is high and tends to mean-revert next day."
+    },
+    {
+      "name": "aapl_volume_surge_signed",
+      "mode": "partner",
+      "parent": "msft_volume_surge",
+      "role": "apple_own",
+      "formula": "multiply(zscore(AAPL_Volume, 20), sign(pct_change(AAPL_Close, 1)))",
+      "hypothesis": "Pairs MSFT volume attention with Apple's own volume-confirmed direction; high-volume up/down days carry continuation or exhaustion information different from the peer volume signal."
+    },
+    {
+      "name": "aapl_close_position_vs_qqq_position",
+      "mode": "partner",
+      "parent": "aapl_close_position_in_range",
+      "role": "relative_move",
+      "formula": "subtract(safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low)), safe_divide(subtract(QQQ_Close, QQQ_Low), subtract(QQQ_High, QQQ_Low)))",
+      "hypothesis": "Apple's close location relative to the market's close location removes the market-wide component of the intraday signal, complementing the raw Apple position that flipped sign by regime."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 8612,
+    "output_tokens": 1699
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

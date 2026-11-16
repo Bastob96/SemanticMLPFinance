@@ -1,0 +1,42 @@
+[
+  {
+    "name": "log_aapl_nvda_volume_ratio_z20",
+    "formula": "zscore(log(safe_divide(AAPL_Volume, NVDA_Volume)), 20)",
+    "hypothesis": "The raw volume surge difference is dominated by spikes and regime scale; a log ratio z-scored over 20 days is scale-free and less skewed, which should stabilise the 2022/2024 failures.",
+    "round": 4,
+    "how_selected": "team trial, round 4",
+    "auc_gain": 0.013722883751656135,
+    "years_helped": 3,
+    "team_gain": 0.013722883751656135
+  },
+  {
+    "name": "nvda_range_vs_aapl_range",
+    "formula": "subtract(safe_divide(subtract(NVDA_High, NVDA_Low), NVDA_Close), multiply(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 2))",
+    "hypothesis": "Tech risk appetite shows up in NVDA's intraday range relative to Apple's; when NVDA ranges widen much more than Apple's, Apple may catch up or rebound next day.",
+    "round": 4,
+    "how_selected": "pair trial with qqq_volume_surge_peer, round 4",
+    "auc_gain": 0.007854929685971897,
+    "years_helped": 3,
+    "team_gain": -0.002553173772802935
+  },
+  {
+    "name": "qqq_volume_surge_peer",
+    "formula": "subtract(safe_divide(QQQ_Volume, rolling_mean(QQQ_Volume, 20)), 1)",
+    "hypothesis": "Apple's volatility level is informative; QQQ volume surge identifies whether the volatility is market-wide participation, giving a conditional interaction.",
+    "round": 2,
+    "how_selected": "pair trial with nvda_range_vs_aapl_range, round 4",
+    "auc_gain": 0.008239541699420223,
+    "years_helped": 2,
+    "team_gain": 0.005294536292777988
+  },
+  {
+    "name": "msft_nvda_volume_ratio_z20",
+    "formula": "zscore(log(safe_divide(MSFT_Volume, NVDA_Volume)), 20)",
+    "hypothesis": "Peer-vs-peer volume rotation describes sector flow state, complementing Apple-specific relative volume by showing whether NVDA volume dominance is sector-wide.",
+    "round": 8,
+    "how_selected": "team trial, round 8",
+    "auc_gain": 0.021905175937305076,
+    "years_helped": 4,
+    "team_gain": 0.011571794396282885
+  }
+]

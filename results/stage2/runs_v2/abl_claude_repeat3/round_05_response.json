@@ -1,0 +1,85 @@
+{
+  "reflection": "Volume-based relative/market factors (AAPL vs NVDA volume, QQQ volume surge, NVDA range) are the only ones that joined; they help in 2023 and 2025 and often hurt in 2024. One-day intraday/close-location and gap factors flip sign across years and fail. I will try more volume-regime and range-relative features, smoothed to reduce noise, and partner them with the team's volume/range factors using different roles (apple_own, relative_move). I'll avoid directional one-day intraday quantities.",
+  "lessons": [
+    {
+      "name": "log_aapl_nvda_volume_ratio_z20",
+      "lesson": "Standardizing the log AAPL/NVDA volume ratio removed the volume-spike skew and gave steady gains for both models in 3 of 4 years, so relative volume is real signal."
+    },
+    {
+      "name": "aapl_close_loc_3d_mean",
+      "lesson": "A 3-day close location is too noisy and overlaps with 3-day mean return, so it only helped in 2023."
+    },
+    {
+      "name": "aapl_intraday_minus_overnight_5d",
+      "lesson": "Intraday-versus-overnight return split helped LR in 2022-23 but reversed in 2024-25, so the pattern is not stable across regimes."
+    },
+    {
+      "name": "nvda_range_vs_aapl_range",
+      "lesson": "NVDA's range relative to Apple's captures sector-vs-Apple turbulence and helped both models in 3 years, but only added value in combination with QQQ volume surge."
+    },
+    {
+      "name": "qqq_range_expansion_vs_aapl_volume",
+      "lesson": "QQQ range expansion ratio is near-noise for direction alone and only gave extra value in a pair, not enough to stand."
+    },
+    {
+      "name": "aapl_msft_volume_gap_signed_close_loc",
+      "lesson": "The MSFT-minus-NVDA close location difference is a noisy one-day intraday quantity with little relation to Apple's next move."
+    }
+  ],
+  "factors": [
+    {
+      "name": "qqq_volume_surge_5d_smooth",
+      "mode": "improve",
+      "parent": "qqq_volume_surge_peer",
+      "role": "peer_lead",
+      "formula": "subtract(safe_divide(rolling_mean(QQQ_Volume, 5), rolling_mean(QQQ_Volume, 60)), 1)",
+      "hypothesis": "The one-day QQQ volume surge was noisy and hurt in 2022 and 2024; a 5d-vs-60d volume ratio captures persistent stress regimes and should be more stable."
+    },
+    {
+      "name": "log_aapl_nvda_volume_ratio_z60",
+      "mode": "improve",
+      "parent": "log_aapl_nvda_volume_ratio_z20",
+      "role": "relative_move",
+      "formula": "zscore(log(safe_divide(AAPL_Volume, NVDA_Volume)), 60)",
+      "hypothesis": "The 20d z-score failed in 2024, probably because the baseline adapts too fast; a 60d baseline gives a steadier relative-volume deviation."
+    },
+    {
+      "name": "aapl_range_zscore_20",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "zscore(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 20)",
+      "hypothesis": "Apple's range relative to its own recent norm flags unusual intraday turbulence, which often precedes mean reversion; it is normalised unlike the raw daily range."
+    },
+    {
+      "name": "qqq_msft_volume_ratio_z20",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "zscore(log(safe_divide(QQQ_Volume, MSFT_Volume)), 20)",
+      "hypothesis": "Abnormal QQQ volume versus MSFT volume shows when flows are index-driven rather than stock-specific, which changes how Apple follows the market."
+    },
+    {
+      "name": "aapl_volume_trend_5_60",
+      "mode": "partner",
+      "parent": "nvda_range_vs_aapl_range",
+      "role": "apple_own",
+      "formula": "subtract(safe_divide(rolling_mean(AAPL_Volume, 5), rolling_mean(AAPL_Volume, 60)), 1)",
+      "hypothesis": "A slow Apple volume regime measure complements the range-based market-turbulence factor by showing whether Apple itself is seeing heightened participation."
+    },
+    {
+      "name": "aapl_minus_qqq_5d_vs_volume_z",
+      "mode": "partner",
+      "parent": "log_aapl_nvda_volume_ratio_z20",
+      "role": "relative_move",
+      "formula": "multiply(subtract(pct_change(AAPL_Close, 5), pct_change(QQQ_Close, 5)), zscore(log(safe_divide(QQQ_Volume, AAPL_Volume)), 20))",
+      "hypothesis": "Apple's 5d relative move matters more when volume is unusual; interacting it with a volume z-score gives the team's volume factor a directional partner."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 15981,
+    "output_tokens": 1715
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

@@ -1,0 +1,85 @@
+{
+  "reflection": "The notebook shows that volume-based ideas (QQQ volume surge and the Apple-minus-QQQ volume surge) are the only ones with a sign of life, helping in 2023 and 2025 but missing in 2022 and 2024. Almost every price-based variant (signed, scaled, relative, smoothed) either duplicated an existing factor (similarity above 0.7) or failed in 2024. Volume that is one-day noisy seems to be the weak point. Next I will test smoothed and longer-baseline volume measures to reduce day-to-day noise, and pair volume with a direction or trend sign so it is not blind to whether the market rose or fell. I will also try a drawdown-from-high measure and NVDA volume, which have not been tested yet.",
+  "lessons": [
+    {
+      "name": "qqq_signed_volume_surge",
+      "lesson": "Multiplying QQQ's volume surge by the sign of its daily move gave a near-zero, unstable signal (helped only Logistic Regression, missed in 2024), so the direction tag added noise rather than a consistent edge."
+    },
+    {
+      "name": "aapl_gap_scaled_by_range",
+      "lesson": "Dividing the overnight gap by Apple's daily range made it a weak variant of the gap idea, which was already regime-dependent and too unstable across years."
+    },
+    {
+      "name": "aapl_5d_return_vol_scaled",
+      "lesson": "Scaling the 5-day return by 20-day volatility produced a near-copy (0.98) of AAPL_mean_return_5d, so it had no new information and failed in 2022 and 2024."
+    },
+    {
+      "name": "qqq_close_location_1d",
+      "lesson": "QQQ's close position within its daily range is very similar to QQQ_return_1d (0.75) and flipped sign across years, so it carried no stable new information."
+    },
+    {
+      "name": "aapl_volume_surge_minus_qqq_surge",
+      "lesson": "The relative volume surge helped in 2023 and 2025 but missed in 2022 and 2024, likely because the one-day 20-day baseline is noisy and ignores the market's direction, so it is only a weak promising signal."
+    },
+    {
+      "name": "nvda_volatility_10d",
+      "lesson": "NVDA's 10-day volatility helped only in 2023 and was dominated by the 2024 miss, so the peer-volatility level did not carry a consistent next-day signal for Apple."
+    }
+  ],
+  "factors": [
+    {
+      "name": "qqq_volume_ratio_smooth5d",
+      "mode": "improve",
+      "parent": "qqq_volume_to_ma20",
+      "role": "market_condition",
+      "formula": "subtract(rolling_mean(safe_divide(QQQ_Volume, rolling_mean(QQQ_Volume, 20)), 5), 1)",
+      "hypothesis": "qqq_volume_to_ma20 missed in 2022 and 2024 probably because a single-day volume spike is noisy; averaging the volume ratio over 5 days should keep the sustained participation signal and drop one-day noise."
+    },
+    {
+      "name": "aapl_volume_surge_vs_60d_minus_qqq",
+      "mode": "improve",
+      "parent": "aapl_volume_surge_minus_qqq_surge",
+      "role": "relative_move",
+      "formula": "subtract(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 60)), safe_divide(QQQ_Volume, rolling_mean(QQQ_Volume, 60)))",
+      "hypothesis": "The 20-day baseline is noisy and reacts to recent spikes, which may explain the 2022 and 2024 misses; a 60-day baseline measures Apple's relative volume against a steadier norm."
+    },
+    {
+      "name": "aapl_drawdown_from_20d_high",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "subtract(safe_divide(AAPL_Close, rolling_max(AAPL_Close, 20)), 1)",
+      "hypothesis": "Distance from the 20-day closing high captures how far Apple has pulled back, which is not the same as the moving-average gap or cumulative returns already in the set and may show short-term mean reversion."
+    },
+    {
+      "name": "nvda_volume_surge",
+      "mode": "new",
+      "parent": "",
+      "role": "peer_lead",
+      "formula": "subtract(safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 20)), 1)",
+      "hypothesis": "Heavy volume in NVDA, the highest-volatility AI peer, may signal sector positioning that leads Apple's next move; this volume channel has not been tested for a peer."
+    },
+    {
+      "name": "aapl_signed_volume_surge",
+      "mode": "partner",
+      "parent": "qqq_volume_to_ma20",
+      "role": "apple_own",
+      "formula": "multiply(sign(pct_change(AAPL_Close, 1)), subtract(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20)), 1))",
+      "hypothesis": "Pairing the market-wide QQQ volume surge with Apple's own volume surge signed by Apple's up or down day gives Apple-specific direction information that the market volume factor lacks."
+    },
+    {
+      "name": "qqq_trend_60d",
+      "mode": "partner",
+      "parent": "aapl_volume_surge_minus_qqq_surge",
+      "role": "market_condition",
+      "formula": "subtract(safe_divide(QQQ_Close, rolling_mean(QQQ_Close, 60)), 1)",
+      "hypothesis": "The relative volume surge ignores the market regime; a 60-day QQQ trend indicates whether heavy relative volume happens in an uptrend or a downtrend, which may explain its 2022 and 2024 misses."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 12148,
+    "output_tokens": 3434
+  },
+  "_model": "claude-haiku-5-5",
+  "_stop_reason": "tool_use"
+}

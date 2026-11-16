@@ -1,0 +1,54 @@
+{
+  "reflection": "replay of abl_claude_nofeedback, round 2",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "aapl_close_location_avg_3d",
+      "mode": "improve",
+      "parent": "aapl_close_location_in_range",
+      "role": "apple_own",
+      "formula": "rolling_mean(safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low)), 3)",
+      "hypothesis": "Single-day close location is noisy; a 3-day average gives a steadier buying/selling pressure signal."
+    },
+    {
+      "name": "aapl_minus_msft_5d_vol_scaled",
+      "mode": "improve",
+      "parent": "aapl_minus_msft_5d_relative",
+      "role": "relative_move",
+      "formula": "safe_divide(subtract(pct_change(AAPL_Close, 5), pct_change(MSFT_Close, 5)), rolling_std(pct_change(AAPL_Close, 1), 20))",
+      "hypothesis": "Scaling the relative move by Apple's vol makes it comparable across calm and turbulent years, so any mean reversion in it should stay stable."
+    },
+    {
+      "name": "aapl_intraday_return",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "safe_divide(subtract(AAPL_Close, AAPL_Open), AAPL_Open)",
+      "hypothesis": "Intraday direction separates the day's own move from the overnight gap and may carry different next-day information."
+    },
+    {
+      "name": "peer_dispersion_1d",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "abs(subtract(pct_change(MSFT_Close, 1), pct_change(NVDA_Close, 1)))",
+      "hypothesis": "When the peers disagree, the tech sector is in a mixed state, and Apple's next move may be less predictable or revert."
+    },
+    {
+      "name": "aapl_volume_trend_signed",
+      "mode": "partner",
+      "parent": "aapl_close_location_in_range",
+      "role": "apple_own",
+      "formula": "multiply(sign(pct_change(AAPL_Close, 1)), safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20)))",
+      "hypothesis": "Combining the day's direction with relative volume shows conviction behind the move, which complements close location, a price-only pressure signal."
+    },
+    {
+      "name": "qqq_trend_vs_aapl_gap_20d",
+      "mode": "partner",
+      "parent": "qqq_vol_ratio_5_20",
+      "role": "relative_move",
+      "formula": "subtract(pct_change(AAPL_Close, 20), pct_change(QQQ_Close, 20))",
+      "hypothesis": "Apple's 20-day lag or lead against the market, paired with the market volatility regime, may identify when catch-up or reversion happens."
+    }
+  ]
+}

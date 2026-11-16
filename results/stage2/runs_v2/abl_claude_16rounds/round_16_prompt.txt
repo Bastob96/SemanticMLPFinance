@@ -1,0 +1,372 @@
+ROUND 16
+
+GOAL
+Predict whether AAPL closes higher tomorrow than today (binary). A factor is computed after the close of day t.
+
+DATA (daily, adjusted OHLCV, Sept 2021 - Dec 2025)
+Inputs: AAPL_Open, AAPL_High, AAPL_Low, AAPL_Close, AAPL_Volume, QQQ_Open, QQQ_High, QQQ_Low, QQQ_Close, QQQ_Volume, MSFT_Open, MSFT_High, MSFT_Low, MSFT_Close, MSFT_Volume, NVDA_Open, NVDA_High, NVDA_Low, NVDA_Close, NVDA_Volume
+Market summary up to 30 June 2025:
+- AAPL: 2021: +17% (daily vol 1.5%), 2022: -28% (daily vol 2.2%), 2023: +55% (daily vol 1.3%), 2024: +36% (daily vol 1.4%), 2025: -16% (daily vol 2.6%)
+- QQQ: 2021: +5% (daily vol 1.1%), 2022: -33% (daily vol 2.0%), 2023: +56% (daily vol 1.1%), 2024: +28% (daily vol 1.1%), 2025: +8% (daily vol 1.9%); daily-return correlation with AAPL 0.79
+- MSFT: 2021: +12% (daily vol 1.4%), 2022: -28% (daily vol 2.2%), 2023: +58% (daily vol 1.6%), 2024: +15% (daily vol 1.3%), 2025: +19% (daily vol 1.9%); daily-return correlation with AAPL 0.66
+- NVDA: 2021: +31% (daily vol 3.2%), 2022: -51% (daily vol 4.0%), 2023: +246% (daily vol 3.1%), 2024: +179% (daily vol 3.3%), 2025: +14% (daily vol 4.0%); daily-return correlation with AAPL 0.54
+
+HOW EACH FACTOR IS TESTED
+For each year 2022, 2023, 2024 and 2025: train on Q1-Q2, score on Q3 (validation). Q4 is never used in this search.
+The score is ROC AUC; "gain" is the change in AUC when a factor is added, averaged over Logistic Regression (LR)
+and Random Forest (RF), and shown for each year and each model.
+1. Alone: the factor is added to the 22 existing factors.
+2. Team trial: the factor is added to the 22 factors plus the selected team.
+3. Pair trial: promising factors of different roles are added two at a time.
+A factor joins the SELECTED TEAM if, on top of the 22 factors and the current team, it helps in at least 3 of 4 years, the average gain is at least 0.010, and its similarity to every existing and selected factor is below 0.90. The team holds at most 6 factors.
+A PAIR joins the team together if the two factors added together help in at least 3 of 4 years, the pair's average gain is at least 0.010, and the pair's gain is at least 0.010 more than the two factors' gains (each on top of the team) added up. Two factors that each got lucky simply add up their luck; real teamwork gives more than the sum.
+A factor that is weak alone but shows some sign of life (helped in 2+ years, or helped one model) stays on the PROMISING list and can still join the team later in a pair. Nothing is rejected only for being weak alone.
+For reference, factors made of pure random numbers rarely pass these bars; small gains are noise.
+
+THE 22 EXISTING FACTORS (do not repeat them)
+- AAPL_return_1d = pct_change(AAPL_Close, 1)
+- AAPL_mean_return_3d = rolling_mean(pct_change(AAPL_Close, 1), 3)
+- AAPL_mean_return_5d = rolling_mean(pct_change(AAPL_Close, 1), 5)
+- AAPL_mean_return_10d = rolling_mean(pct_change(AAPL_Close, 1), 10)
+- AAPL_mean_return_20d = rolling_mean(pct_change(AAPL_Close, 1), 20)
+- AAPL_cum_return_5d = pct_change(AAPL_Close, 5)
+- AAPL_cum_return_10d = pct_change(AAPL_Close, 10)
+- AAPL_cum_return_20d = pct_change(AAPL_Close, 20)
+- AAPL_volatility_5d = rolling_std(pct_change(AAPL_Close, 1), 5)
+- AAPL_volatility_10d = rolling_std(pct_change(AAPL_Close, 1), 10)
+- AAPL_volatility_20d = rolling_std(pct_change(AAPL_Close, 1), 20)
+- AAPL_close_to_ma20 = subtract(safe_divide(AAPL_Close, rolling_mean(AAPL_Close, 20)), 1)
+- AAPL_volume_to_ma20 = subtract(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20)), 1)
+- AAPL_daily_range = safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close)
+- QQQ_return_1d = pct_change(QQQ_Close, 1)
+- QQQ_cum_return_5d = pct_change(QQQ_Close, 5)
+- MSFT_return_1d = pct_change(MSFT_Close, 1)
+- MSFT_cum_return_5d = pct_change(MSFT_Close, 5)
+- NVDA_return_1d = pct_change(NVDA_Close, 1)
+- NVDA_cum_return_5d = pct_change(NVDA_Close, 5)
+- AAPL_minus_QQQ_1d = subtract(pct_change(AAPL_Close, 1), pct_change(QQQ_Close, 1))
+- AAPL_minus_peer_mean_1d = subtract(pct_change(AAPL_Close, 1), multiply(add(pct_change(MSFT_Close, 1), pct_change(NVDA_Close, 1)), 0.5))
+
+MOST USEFUL EXISTING FACTORS IN STAGE 1
+- AAPL_volatility_10d: mean AUC drop when shuffled +0.0125
+- MSFT_return_1d: mean AUC drop when shuffled +0.0114
+- NVDA_cum_return_5d: mean AUC drop when shuffled +0.0070
+- AAPL_volatility_20d: mean AUC drop when shuffled +0.0067
+- AAPL_cum_return_20d: mean AUC drop when shuffled +0.0066
+- AAPL_mean_return_20d: mean AUC drop when shuffled +0.0060
+
+FACTOR ROLES (label every factor with one)
+- market_condition: the state of the whole market or tech sector (e.g. QQQ trend or volatility, how much the peers disagree)
+- relative_move: Apple compared with the market or with MSFT/NVDA
+- apple_own: Apple's own price, range or volume pattern
+- peer_lead: moves of QQQ, MSFT or NVDA that might lead Apple's next move
+
+THE SELECTED TEAM
+- aapl_vs_nvda_volume_surge_range_scaled [apple] = safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(NVDA_Volume, 20)), add(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 0.005)) (joined: team trial, round 11)
+- qqq_volume_move_divergence_vol_regime_gated [market] = safe_divide(subtract(zscore(QQQ_Volume, 20), zscore(abs(pct_change(QQQ_Close, 1)), 20)), add(rolling_std(pct_change(QQQ_Close, 1), 20), 0.004)) (joined: team trial, round 15)
+- aapl_vs_qqq_volume_surge_vs_vol_ratio [relative] = multiply(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), safe_divide(rolling_std(pct_change(AAPL_Close, 1), 5), add(rolling_std(pct_change(AAPL_Close, 1), 60), 0.002))) (joined: team trial, round 15)
+
+PROMISING LIST (weak alone, may work in a pair; good parents for PARTNER factors)
+- aapl_nvda_volume_range_scaled_x_qqq_div [market] alone +0.021 (3/4 years), on the team +0.000 (2/4), best pair with aapl_vs_qqq_volume_surge_60d_base +0.039 | safe_divide(subtract(zscore(QQQ_Volume, 20), zscore(abs(pct_change(QQQ_Close, 1)), 20)), add(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 0.005))
+- aapl_vs_qqq_volume_60d_vol_scaled [relative] alone +0.016 (2/4 years), on the team +0.011 (2/4), best pair with aapl_nvda_volume_range_scaled_x_qqq_div +0.035 | safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), add(rolling_std(pct_change(AAPL_Close, 1), 20), 0.005))
+- aapl_vs_qqq_volume_surge_60d_base [relative] alone +0.015 (2/4 years), on the team +0.011 (3/4), best pair with aapl_nvda_volume_range_scaled_x_qqq_div +0.039 | subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60))
+- qqq_volume_vs_price_divergence [market] alone +0.012 (2/4 years), on the team +0.015 (2/4), best pair with aapl_vs_qqq_volume_60d_vol_scaled_ratio +0.034 | subtract(zscore(QQQ_Volume, 20), zscore(abs(pct_change(QQQ_Close, 1)), 20))
+- aapl_volume_range_scaled_vs_qqq_up_move [relative] alone +0.014 (2/4 years), on the team +0.007 (3/4), best pair with aapl_nvda_volume_range_scaled_x_qqq_div +0.030 | safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 20)), add(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 0.005))
+- qqq_volume_price_divergence_60d_range_scaled [market] alone +0.012 (3/4 years), on the team +0.013 (2/4), best pair with aapl_vs_qqq_volume_surge_60d_base +0.025 | safe_divide(subtract(zscore(QQQ_Volume, 60), zscore(abs(pct_change(QQQ_Close, 1)), 60)), add(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 0.005))
+- aapl_vs_qqq_volume_60d_vol_scaled_ratio [relative] alone +0.013 (2/4 years), on the team +0.010 (3/4), best pair with aapl_nvda_volume_range_scaled_x_qqq_div +0.037 | safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), add(rolling_std(pct_change(AAPL_Close, 1), 60), 0.005))
+- aapl_dollar_volume_vs_qqq_dollar_volume [relative] alone +0.012 (2/4 years), on the team +0.009 (3/4), best pair with aapl_nvda_volume_range_scaled_x_qqq_div +0.027 | subtract(zscore(multiply(AAPL_Volume, AAPL_Close), 20), zscore(multiply(QQQ_Volume, QQQ_Close), 20))
+- aapl_volume_vs_peer_volume [apple] alone +0.012 (2/4 years), on the team +0.002 (1/4), best pair with aapl_nvda_volume_range_scaled_x_qqq_div +0.030 | subtract(zscore(AAPL_Volume, 20), zscore(NVDA_Volume, 20))
+- aapl_vs_qqq_volume_range_scaled [relative] alone +0.011 (2/4 years), on the team +0.002 (2/4) | safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), add(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 0.005))
+- aapl_vs_qqq_volume_60d_both [relative] alone +0.011 (2/4 years), best pair with aapl_vs_nvda_volume_surge_vol_scaled +0.024 | subtract(zscore(AAPL_Volume, 60), zscore(QQQ_Volume, 60))
+- aapl_vs_nvda_volume_surge_vol_scaled [apple] alone +0.010 (2/4 years), on the team +0.002 (1/4), best pair with aapl_vs_qqq_volume_60d_vol_scaled +0.025 | safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(NVDA_Volume, 20)), add(rolling_std(pct_change(AAPL_Close, 1), 20), 0.005))
+
+PAIR TRIALS SO FAR
+- R13: aapl_volume_range_scaled_vs_qqq_up_move [relative] + qqq_volume_vs_price_divergence [market]: pair +0.025 (2022 +0.013, 2023 +0.005, 2024 +0.011, 2025 +0.072; 4/4 years; LR +0.003, RF +0.033); alone on the team +0.007 and +0.015, extra over the two added up +0.003 -> not joined
+- R13: aapl_volume_range_scaled_vs_qqq_up_move [relative] + aapl_volume_vs_peer_volume [apple]: pair +0.018 (2022 +0.004, 2023 +0.012, 2024 +0.009, 2025 +0.046; 4/4 years; LR +0.004, RF +0.022); alone on the team +0.007 and +0.002, extra over the two added up +0.009 -> not joined
+- R13: aapl_volume_range_scaled_vs_qqq_up_move [relative] + aapl_vs_nvda_volume_surge_vol_scaled [apple]: pair +0.018 (2022 +0.002, 2023 +0.012, 2024 +0.006, 2025 +0.051; 4/4 years; LR +0.000, RF +0.023); alone on the team +0.007 and +0.002, extra over the two added up +0.009 -> not joined
+- R13: aapl_volume_range_scaled_vs_qqq_up_move [relative] + aapl_vs_nvda_volume_surge_qqq_vol_scaled [apple]: pair +0.017 (2022 +0.003, 2023 +0.016, 2024 +0.003, 2025 +0.047; 4/4 years; LR -0.003, RF +0.024); alone on the team +0.007 and +0.003, extra over the two added up +0.007 -> not joined
+- R13: aapl_volume_range_scaled_vs_qqq_up_move [relative] + nvda_volume_surge [market]: pair +0.018 (2022 +0.013, 2023 +0.042, 2024 -0.016, 2025 +0.033; 3/4 years; LR +0.006, RF +0.022); alone on the team +0.007 and +0.006, extra over the two added up +0.005 -> not joined
+- R14: aapl_return_gap_x_qqq_volume_price_div [relative] + aapl_nvda_volume_range_scaled_x_qqq_div [market]: pair +0.025 (2022 +0.028, 2023 +0.006, 2024 +0.012, 2025 +0.054; 4/4 years; LR +0.019, RF +0.027); alone on the team +0.003 and +0.021, extra over the two added up +0.001 -> not joined
+- R14: qqq_volume_price_divergence_60d_range_scaled [market] + aapl_vs_qqq_volume_60d_vol_scaled [relative]: pair +0.023 (2022 +0.032, 2023 +0.020, 2024 +0.005, 2025 +0.033; 4/4 years; LR +0.010, RF +0.027); alone on the team +0.013 and +0.011, extra over the two added up -0.001 -> not joined
+- R14: qqq_volume_price_divergence_60d_range_scaled [market] + aapl_vs_qqq_volume_surge_60d_base [relative]: pair +0.025 (2022 +0.035, 2023 +0.017, 2024 +0.008, 2025 +0.041; 4/4 years; LR +0.016, RF +0.028); alone on the team +0.013 and +0.011, extra over the two added up +0.001 -> not joined
+- R14: qqq_volume_price_divergence_60d_range_scaled [market] + aapl_volume_range_scaled_vs_qqq_up_move [relative]: pair +0.021 (2022 +0.015, 2023 +0.002, 2024 +0.007, 2025 +0.061; 4/4 years; LR +0.000, RF +0.028); alone on the team +0.013 and +0.007, extra over the two added up +0.001 -> not joined
+- R14: qqq_volume_price_divergence_60d_range_scaled [market] + aapl_vs_qqq_volume_60d_vol_scaled_ratio [relative]: pair +0.025 (2022 +0.030, 2023 +0.022, 2024 +0.005, 2025 +0.042; 4/4 years; LR +0.016, RF +0.028); alone on the team +0.013 and +0.010, extra over the two added up +0.002 -> not joined
+- R14: qqq_volume_price_divergence_60d_range_scaled [market] + aapl_dollar_volume_vs_qqq_dollar_volume [relative]: pair +0.018 (2022 +0.006, 2023 +0.007, 2024 +0.004, 2025 +0.057; 4/4 years; LR +0.004, RF +0.023); alone on the team +0.013 and +0.009, extra over the two added up -0.004 -> not joined
+- R15: aapl_minus_qqq_return_x_volume_gap_signed [relative] + aapl_nvda_volume_range_scaled_x_qqq_div [market]: pair -0.004 (2022 +0.017, 2023 -0.004, 2024 -0.024, 2025 -0.003; 1/4 years; LR +0.002, RF -0.006); alone on the team -0.014 and +0.000, extra over the two added up +0.010 -> not joined
+
+YOUR LAB NOTEBOOK (every factor tried so far)
+[R15] qqq_volume_move_divergence_vol_regime_gated | improve (parent: aapl_nvda_volume_range_scaled_x_qqq_div) | role: market_condition | KEPT (joined the team (team trial, round 15): gain on the team +0.022, helped 3/4 years)
+  formula: safe_divide(subtract(zscore(QQQ_Volume, 20), zscore(abs(pct_change(QQQ_Close, 1)), 20)), add(rolling_std(pct_change(QQQ_Close, 1), 20), 0.004))
+  alone (added to the 22): 2022 -0.001, 2023 +0.017, 2024 -0.013, 2025 +0.071 | avg +0.018 | LR +0.021, RF +0.018 | similarity 0.28 (QQQ_return_1d)
+  on top of the selected team (1 factor): avg +0.022, helped 3/4 years
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.013); helped both models; new information (not similar to any existing factor)
+
+[R15] aapl_vs_qqq_volume_surge_vs_vol_ratio | improve (parent: aapl_vs_qqq_volume_surge_60d_base) | role: relative_move | KEPT (joined the team (team trial, round 15): gain on the team +0.018, helped 4/4 years)
+  formula: multiply(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), safe_divide(rolling_std(pct_change(AAPL_Close, 1), 5), add(rolling_std(pct_change(AAPL_Close, 1), 60), 0.002)))
+  alone (added to the 22): 2022 -0.005, 2023 +0.046, 2024 -0.014, 2025 +0.038 | avg +0.016 | LR +0.023, RF +0.014 | similarity 0.48 (aapl_vs_nvda_volume_surge_range_scaled)
+  on top of the selected team (2 factors): avg +0.018, helped 4/4 years
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.014); helped both models
+
+[R11] aapl_vs_nvda_volume_surge_range_scaled | improve (parent: aapl_vs_nvda_volume_surge_vol_scaled) | role: apple_own | KEPT (joined the team (team trial, round 11): gain on the team +0.013, helped 3/4 years)
+  formula: safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(NVDA_Volume, 20)), add(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 0.005))
+  alone (added to the 22): 2022 +0.000, 2023 +0.024, 2024 -0.013, 2025 +0.042 | avg +0.013 | LR +0.020, RF +0.011 | similarity 0.49 (AAPL_volume_to_ma20)
+  why: helped in 2022, 2023, 2025 but not in 2024 (worst 2024: -0.013); helped both models
+  your lesson: Scaling the volume contrast by today's range is better than by past volatility because it adapts to the current day's turbulence and helped both models, though 2024 still lost.
+
+[R12] aapl_nvda_volume_range_scaled_x_qqq_div | partner (parent: aapl_vs_nvda_volume_surge_range_scaled) | role: market_condition | PROMISING (not enough for the team yet but some sign of life: alone +0.021 (3/4 years), on the team +0.000 (2/4 years))
+  formula: safe_divide(subtract(zscore(QQQ_Volume, 20), zscore(abs(pct_change(QQQ_Close, 1)), 20)), add(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 0.005))
+  alone (added to the 22): 2022 +0.014, 2023 +0.014, 2024 -0.020, 2025 +0.074 | avg +0.021 | LR +0.019, RF +0.021 | similarity 0.28 (QQQ_return_1d)
+  on top of the selected team (3 factors): avg +0.000, helped 2/4 years
+  best pair: with aapl_vs_qqq_volume_surge_60d_base: avg +0.039, helped 4/4 years, +0.008 compared with the two alone added up
+  why: helped in 2022, 2023, 2025 but not in 2024 (worst 2024: -0.020); helped both models; new information (not similar to any existing factor); worked better together with aapl_vs_qqq_volume_surge_60d_base (pair +0.039, +0.008 more than the two alone added up)
+  your lesson: QQQ volume against absolute move size, scaled by QQQ's range, was the best single alone gain (+0.021) with big 2025 gains, but it lost in 2024, and its pairs help without a clear synergy bonus.
+
+[R9] aapl_vs_qqq_volume_60d_vol_scaled | improve (parent: aapl_vs_nvda_volume_surge_vol_scaled) | role: relative_move | PROMISING (not enough for the team yet but some sign of life: alone +0.016 (2/4 years), on the team +0.011 (2/4 years))
+  formula: safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), add(rolling_std(pct_change(AAPL_Close, 1), 20), 0.005))
+  alone (added to the 22): 2022 -0.008, 2023 +0.041, 2024 -0.022, 2025 +0.052 | avg +0.016 | LR +0.012, RF +0.017 | similarity 0.37 (AAPL_volume_to_ma20)
+  on top of the selected team (1 factor): avg +0.011, helped 2/4 years
+  best pair: with aapl_nvda_volume_range_scaled_x_qqq_div: avg +0.035, helped 4/4 years, +0.004 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.022); helped both models; worked better together with aapl_nvda_volume_range_scaled_x_qqq_div (pair +0.035, +0.004 more than the two alone added up)
+  your lesson: Scaling the volume contrast by Apple's volatility with a 60d QQQ baseline gave the best alone gain but still lost in 2022 and 2024, so the regime dependence remains.
+
+[R7] aapl_vs_qqq_volume_surge_60d_base | improve (parent: aapl_vs_qqq_volume_surge) | role: relative_move | PROMISING (not enough for the team yet but some sign of life: alone +0.015 (2/4 years), on the team +0.011 (3/4 years))
+  formula: subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60))
+  alone (added to the 22): 2022 -0.009, 2023 +0.038, 2024 -0.024, 2025 +0.054 | avg +0.015 | LR +0.017, RF +0.014 | similarity 0.38 (AAPL_volume_to_ma20)
+  on top of the selected team (1 factor): avg +0.011, helped 3/4 years
+  best pair: with aapl_nvda_volume_range_scaled_x_qqq_div: avg +0.039, helped 4/4 years, +0.008 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.024); helped both models; worked better together with aapl_nvda_volume_range_scaled_x_qqq_div (pair +0.039, +0.008 more than the two alone added up)
+  your lesson: A slower QQQ volume baseline improved the AAPL-vs-QQQ volume contrast slightly and helped both models, but still failed in 2022 and 2024.
+
+[R13] aapl_volume_range_scaled_vs_qqq_up_move | partner (parent: aapl_nvda_volume_range_scaled_x_qqq_div) | role: relative_move | PROMISING (not enough for the team yet but some sign of life: alone +0.014 (2/4 years), on the team +0.007 (3/4 years))
+  formula: safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 20)), add(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 0.005))
+  alone (added to the 22): 2022 -0.014, 2023 +0.024, 2024 -0.018, 2025 +0.063 | avg +0.014 | LR +0.008, RF +0.016 | similarity 0.50 (aapl_vs_nvda_volume_surge_range_scaled)
+  on top of the selected team (1 factor): avg +0.007, helped 3/4 years
+  best pair: with aapl_nvda_volume_range_scaled_x_qqq_div: avg +0.030, helped 4/4 years, +0.002 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.018); helped both models; worked better together with aapl_nvda_volume_range_scaled_x_qqq_div (pair +0.030, +0.002 more than the two alone added up)
+  your lesson: Scaling the AAPL-vs-QQQ volume gap by QQQ's range gave a big 2025 gain but lost in 2022 and 2024, and it overlaps with the team's NVDA range-scaled factor.
+
+[R11] aapl_vs_qqq_volume_60d_vol_scaled_ratio | improve (parent: aapl_vs_qqq_volume_60d_vol_scaled) | role: relative_move | PROMISING (not enough for the team yet but some sign of life: alone +0.013 (2/4 years), on the team +0.010 (3/4 years))
+  formula: safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), add(rolling_std(pct_change(AAPL_Close, 1), 60), 0.005))
+  alone (added to the 22): 2022 -0.011, 2023 +0.041, 2024 -0.027, 2025 +0.047 | avg +0.013 | LR +0.015, RF +0.012 | similarity 0.49 (aapl_vs_nvda_volume_surge_range_scaled)
+  on top of the selected team (1 factor): avg +0.010, helped 3/4 years
+  best pair: with aapl_nvda_volume_range_scaled_x_qqq_div: avg +0.037, helped 4/4 years, +0.007 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.027); helped both models; worked better together with aapl_nvda_volume_range_scaled_x_qqq_div (pair +0.037, +0.007 more than the two alone added up)
+  your lesson: Dividing by 60d Apple volatility kept the 2023/2025 gains and helped the team 3/4 years, and it complements QQQ volume divergence, but 2022 and 2024 alone still lose.
+
+[R12] aapl_dollar_volume_vs_qqq_dollar_volume | new | role: relative_move | PROMISING (not enough for the team yet but some sign of life: alone +0.012 (2/4 years), on the team +0.009 (3/4 years))
+  formula: subtract(zscore(multiply(AAPL_Volume, AAPL_Close), 20), zscore(multiply(QQQ_Volume, QQQ_Close), 20))
+  alone (added to the 22): 2022 -0.021, 2023 +0.035, 2024 -0.021, 2025 +0.057 | avg +0.012 | LR +0.014, RF +0.012 | similarity 0.50 (aapl_vs_nvda_volume_surge_range_scaled)
+  on top of the selected team (1 factor): avg +0.009, helped 3/4 years
+  best pair: with aapl_nvda_volume_range_scaled_x_qqq_div: avg +0.027, helped 4/4 years, -0.003 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.021); helped both models
+  your lesson: Dollar-volume z-scores mostly repeat the share-volume contrast (similarity 0.50 with the team factor), so they were regime-dependent and the pair gave no synergy.
+
+[R9] qqq_volume_vs_price_divergence | new | role: market_condition | PROMISING (not enough for the team yet but some sign of life: alone +0.012 (2/4 years), on the team +0.015 (2/4 years))
+  formula: subtract(zscore(QQQ_Volume, 20), zscore(abs(pct_change(QQQ_Close, 1)), 20))
+  alone (added to the 22): 2022 -0.001, 2023 +0.011, 2024 -0.029, 2025 +0.067 | avg +0.012 | LR +0.022, RF +0.009 | similarity 0.28 (QQQ_return_1d)
+  on top of the selected team (1 factor): avg +0.015, helped 2/4 years
+  best pair: with aapl_vs_qqq_volume_60d_vol_scaled_ratio: avg +0.034, helped 4/4 years, +0.009 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.029); helped both models; new information (not similar to any existing factor); worked better together with aapl_vs_qqq_volume_60d_vol_scaled_ratio (pair +0.034, +0.009 more than the two alone added up)
+  your lesson: QQQ volume relative to absolute move size helped LR and RF in 2025 strongly but lost in 2024, suggesting it captures stress regimes that are rare in the sample.
+
+[R14] qqq_volume_price_divergence_60d_range_scaled | improve (parent: aapl_nvda_volume_range_scaled_x_qqq_div) | role: market_condition | PROMISING (not enough for the team yet but some sign of life: alone +0.012 (3/4 years), on the team +0.013 (2/4 years))
+  formula: safe_divide(subtract(zscore(QQQ_Volume, 60), zscore(abs(pct_change(QQQ_Close, 1)), 60)), add(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 0.005))
+  alone (added to the 22): 2022 +0.008, 2023 +0.010, 2024 -0.032, 2025 +0.061 | avg +0.012 | LR +0.009, RF +0.013 | similarity 0.25 (QQQ_return_1d)
+  on top of the selected team (1 factor): avg +0.013, helped 2/4 years
+  best pair: with aapl_vs_qqq_volume_surge_60d_base: avg +0.025, helped 4/4 years, +0.001 compared with the two alone added up
+  why: helped in 2022, 2023, 2025 but not in 2024 (worst 2024: -0.032); helped both models; new information (not similar to any existing factor); worked better together with aapl_vs_qqq_volume_surge_60d_base (pair +0.025, +0.001 more than the two alone added up)
+  your lesson: The 60d window kept the QQQ volume-vs-move signal but lost in 2024 again, so a slower window did not fix the regime dependence and the pairs showed no synergy.
+
+[R4] aapl_volume_vs_peer_volume | partner (parent: nvda_volume_surge) | role: apple_own | PROMISING (not enough for the team yet but some sign of life: alone +0.012 (2/4 years), on the team +0.002 (1/4 years))
+  formula: subtract(zscore(AAPL_Volume, 20), zscore(NVDA_Volume, 20))
+  alone (added to the 22): 2022 -0.009, 2023 +0.024, 2024 -0.007, 2025 +0.038 | avg +0.012 | LR +0.012, RF +0.012 | similarity 0.50 (AAPL_volume_to_ma20)
+  on top of the selected team (1 factor): avg +0.002, helped 1/4 years
+  best pair: with aapl_nvda_volume_range_scaled_x_qqq_div: avg +0.030, helped 3/4 years, +0.008 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2022: -0.009); helped both models; worked better together with aapl_nvda_volume_range_scaled_x_qqq_div (pair +0.030, +0.008 more than the two alone added up)
+  your lesson: Apple's volume surge relative to NVDA's helped both models in 2023 and 2025 but failed in 2022 and 2024, making it the best but still regime-dependent volume signal.
+
+[R12] aapl_vs_qqq_volume_range_scaled | improve (parent: aapl_vs_qqq_volume_60d_vol_scaled_ratio) | role: relative_move | PROMISING (not enough for the team yet but some sign of life: alone +0.011 (2/4 years), on the team +0.002 (2/4 years))
+  formula: safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), add(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 0.005))
+  alone (added to the 22): 2022 -0.011, 2023 +0.032, 2024 -0.023, 2025 +0.045 | avg +0.011 | LR +0.008, RF +0.012 | similarity 0.49 (aapl_vs_nvda_volume_surge_range_scaled)
+  on top of the selected team (1 factor): avg +0.002, helped 2/4 years
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.023); helped both models
+  your lesson: Range scaling of the AAPL-vs-QQQ contrast overlapped with the NVDA range-scaled team member (similarity 0.49), so it added little on the team and still lost in 2022 and 2024.
+
+[R8] aapl_vs_qqq_volume_60d_both | improve (parent: aapl_vs_qqq_volume_surge_60d_base) | role: relative_move | PROMISING (not enough for the team yet but some sign of life: alone +0.011 (2/4 years))
+  formula: subtract(zscore(AAPL_Volume, 60), zscore(QQQ_Volume, 60))
+  alone (added to the 22): 2022 -0.013, 2023 +0.046, 2024 -0.035, 2025 +0.045 | avg +0.011 | LR -0.000, RF +0.014 | similarity 0.30 (QQQ_cum_return_5d)
+  best pair: with aapl_vs_nvda_volume_surge_vol_scaled: avg +0.024, helped 3/4 years, +0.003 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.035); helped Random Forest only; new information (not similar to any existing factor); worked better together with aapl_vs_nvda_volume_surge_vol_scaled (pair +0.024, +0.003 more than the two alone added up)
+  your lesson: Using 60d baselines on both volumes kept the 2023/2025 gains and 2022/2024 losses, helping RF only, so slower windows did not fix regime dependence.
+
+[R8] aapl_vs_nvda_volume_surge_vol_scaled | improve (parent: aapl_volume_vs_peer_volume) | role: apple_own | PROMISING (not enough for the team yet but some sign of life: alone +0.010 (2/4 years), on the team +0.002 (1/4 years))
+  formula: safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(NVDA_Volume, 20)), add(rolling_std(pct_change(AAPL_Close, 1), 20), 0.005))
+  alone (added to the 22): 2022 -0.002, 2023 +0.024, 2024 -0.012, 2025 +0.031 | avg +0.010 | LR +0.012, RF +0.010 | similarity 0.49 (AAPL_volume_to_ma20)
+  on top of the selected team (1 factor): avg +0.002, helped 1/4 years
+  best pair: with aapl_vs_qqq_volume_60d_vol_scaled: avg +0.025, helped 3/4 years, -0.001 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.012); helped both models
+  your lesson: Dividing the volume contrast by Apple's own volatility reduced the 2022 and 2024 losses and helped both models, making it the most stable volume variant yet.
+
+[R5] aapl_vs_qqq_volume_surge | improve (parent: aapl_volume_vs_peer_volume) | role: relative_move | PROMISING (not enough for the team yet but some sign of life: alone +0.010 (2/4 years))
+  formula: subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 20))
+  alone (added to the 22): 2022 -0.022, 2023 +0.027, 2024 -0.021, 2025 +0.057 | avg +0.010 | LR +0.014, RF +0.009 | similarity 0.32 (AAPL_volume_to_ma20)
+  best pair: with aapl_vs_nvda_volume_surge_vol_scaled: avg +0.018, helped 3/4 years, -0.002 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2022: -0.022); helped both models
+  your lesson: Apple volume surge relative to QQQ helped both models in 2023 and 2025 but failed in 2022 and 2024, similar to the NVDA version so it is regime dependent.
+
+[R9] aapl_vs_nvda_volume_surge_qqq_vol_scaled | improve (parent: aapl_vs_nvda_volume_surge_vol_scaled) | role: apple_own | PROMISING (not enough for the team yet but some sign of life: alone +0.010 (2/4 years), on the team +0.003 (2/4 years))
+  formula: safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(NVDA_Volume, 20)), add(rolling_std(pct_change(QQQ_Close, 1), 20), 0.004))
+  alone (added to the 22): 2022 -0.006, 2023 +0.021, 2024 -0.022, 2025 +0.046 | avg +0.010 | LR +0.011, RF +0.009 | similarity 0.49 (AAPL_volume_to_ma20)
+  on top of the selected team (1 factor): avg +0.003, helped 2/4 years
+  best pair: with aapl_vs_qqq_volume_60d_vol_scaled_ratio: avg +0.022, helped 3/4 years, +0.010 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.022); helped both models; average gain +0.010 is too small to tell apart from luck; worked better together with aapl_vs_qqq_volume_60d_vol_scaled_ratio (pair +0.022, +0.010 more than the two alone added up)
+  your lesson: Scaling by QQQ volatility instead of Apple's was weaker than the Apple-vol version, so Apple-specific volatility is the better normalizer.
+
+[R3] nvda_volume_surge | new | role: market_condition | PROMISING (not enough for the team yet but some sign of life: alone +0.008 (2/4 years), on the team +0.006 (2/4 years))
+  formula: zscore(NVDA_Volume, 20)
+  alone (added to the 22): 2022 -0.010, 2023 +0.070, 2024 -0.043, 2025 +0.018 | avg +0.008 | LR +0.005, RF +0.010 | similarity 0.27 (AAPL_volume_to_ma20)
+  on top of the selected team (1 factor): avg +0.006, helped 2/4 years
+  best pair: with aapl_volume_range_scaled_vs_qqq_up_move: avg +0.018, helped 3/4 years, +0.005 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.043); helped both models; average gain +0.008 is too small to tell apart from luck; new information (not similar to any existing factor); worked better together with aapl_volume_range_scaled_vs_qqq_up_move (pair +0.018, +0.005 more than the two alone added up)
+  your lesson: Unusual NVDA volume is a new attention proxy that gave big gains in 2023 but lost in 2022 and 2024, so it is unstable and probably regime dependent.
+
+[R10] aapl_intraday_return_vs_range_position | partner (parent: aapl_volume_vs_peer_volume) | role: apple_own | PROMISING (not enough for the team yet but some sign of life: alone +0.008 (2/4 years))
+  formula: multiply(safe_divide(subtract(AAPL_Close, AAPL_Open), subtract(AAPL_High, AAPL_Low)), zscore(AAPL_Volume, 20))
+  alone (added to the 22): 2022 -0.012, 2023 +0.006, 2024 -0.037, 2025 +0.074 | avg +0.008 | LR -0.007, RF +0.012 | similarity 0.10 (AAPL_minus_peer_mean_1d)
+  best pair: with qqq_volume_vs_price_divergence: avg +0.020, helped 3/4 years, +0.000 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.037); helped Random Forest only; average gain +0.008 is too small to tell apart from luck; new information (not similar to any existing factor); worked better together with qqq_volume_vs_price_divergence (pair +0.020, +0.000 more than the two alone added up)
+  your lesson: Close-open location times volume surge gave a big 2025 gain for RF but lost in 2022 and 2024, so it is a high-variance regime-specific signal.
+
+[R7] aapl_range_expansion_vs_5d | new | role: apple_own | PROMISING (not enough for the team yet but some sign of life: alone +0.007 (2/4 years))
+  formula: safe_divide(subtract(AAPL_High, AAPL_Low), rolling_mean(subtract(AAPL_High, AAPL_Low), 10))
+  alone (added to the 22): 2022 -0.001, 2023 +0.027, 2024 -0.022, 2025 +0.024 | avg +0.007 | LR -0.003, RF +0.010 | similarity 0.72 (AAPL_daily_range)
+  best pair: with aapl_vs_qqq_volume_surge_60d_base: avg +0.014, helped 3/4 years, -0.008 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.022); helped Random Forest only; average gain +0.007 is too small to tell apart from luck; quite similar to AAPL_daily_range (0.72), so little new information
+  your lesson: Range relative to its recent average mostly repeats the daily range and only helped RF in calm 2023 and 2025.
+
+[R2] msft_volume_surge | partner (parent: aapl_close_position_in_range) | role: peer_lead | PROMISING (not enough for the team yet but some sign of life: alone +0.005 (2/4 years))
+  formula: zscore(MSFT_Volume, 20)
+  alone (added to the 22): 2022 -0.011, 2023 +0.026, 2024 -0.011, 2025 +0.017 | avg +0.005 | LR +0.007, RF +0.005 | similarity 0.49 (AAPL_volume_to_ma20)
+  best pair: with aapl_vs_qqq_volume_surge_60d_base: avg +0.016, helped 2/4 years, -0.004 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.011); helped both models; average gain +0.005 is too small to tell apart from luck
+  your lesson: Unusual MSFT volume is a market-attention proxy that carried slightly new information helping both models, but its effect was unstable in 2022 and 2024.
+
+[R13] nvda_vs_qqq_volume_range_divergence | new | role: peer_lead | PROMISING (not enough for the team yet but some sign of life: alone +0.005 (3/4 years), on the team +0.003 (2/4 years))
+  formula: safe_divide(subtract(zscore(NVDA_Volume, 20), zscore(QQQ_Volume, 20)), add(safe_divide(subtract(NVDA_High, NVDA_Low), NVDA_Close), 0.01))
+  alone (added to the 22): 2022 -0.012, 2023 +0.005, 2024 +0.006, 2025 +0.019 | avg +0.005 | LR -0.006, RF +0.008 | similarity 0.54 (aapl_vs_nvda_volume_surge_range_scaled)
+  on top of the selected team (1 factor): avg +0.003, helped 2/4 years
+  why: helped in 2023, 2024, 2025 but not in 2022 (worst 2022: -0.012); helped Random Forest only; average gain +0.005 is too small to tell apart from luck
+  your lesson: NVDA's volume surge against QQQ's, scaled by NVDA's range, was too noisy and too far from Apple to give more than a small RF-only gain.
+
+[R3] qqq_range_vs_aapl_range | new | role: market_condition | PROMISING (not enough for the team yet but some sign of life: alone +0.004 (3/4 years))
+  formula: subtract(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close))
+  alone (added to the 22): 2022 -0.017, 2023 +0.020, 2024 +0.005, 2025 +0.009 | avg +0.004 | LR +0.004, RF +0.004 | similarity 0.46 (AAPL_daily_range)
+  best pair: with aapl_vs_qqq_volume_surge_60d_base: avg +0.011, helped 2/4 years, -0.008 compared with the two alone added up
+  why: helped in 2023, 2024, 2025 but not in 2022 (worst 2022: -0.017); helped both models; average gain +0.004 is too small to tell apart from luck
+  your lesson: Relative range captured Apple-specific turbulence versus the market and helped three years, but 2022's market-wide high-vol regime made it a drag.
+
+[R4] peer_volume_surge_mean | improve (parent: nvda_volume_surge) | role: market_condition | PROMISING (not enough for the team yet but some sign of life: alone +0.004 (2/4 years))
+  formula: add(zscore(NVDA_Volume, 20), zscore(MSFT_Volume, 20))
+  alone (added to the 22): 2022 -0.009, 2023 +0.043, 2024 -0.041, 2025 +0.024 | avg +0.004 | LR +0.006, RF +0.003 | similarity 0.42 (AAPL_volume_to_ma20)
+  best pair: with aapl_volume_vs_peer_volume: avg +0.012, helped 3/4 years, -0.003 compared with the two alone added up
+  why: helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.041); helped both models; average gain +0.004 is too small to tell apart from luck
+  your lesson: Averaging NVDA and MSFT volume z-scores kept the 2023/2025 gains and 2022/2024 losses, so combining them added no stability.
+
+OLDER OR WEAKER ATTEMPTS (one line each):
+[R7] aapl_vs_nvda_volume_change_1d | PROMISING | avg +0.004 | helped in 2022, 2023, 2025 but not in 2024 (worst 2024: -0.002); helped Logistic Regression only; average gain +0.004 is too small to tell apart from luck; new information (not similar to any existing factor) | subtract(diff(log(AAPL_Volume), 1), diff(log(NVDA_Volume), 1))
+[R2] aapl_minus_qqq_cum_5d | PROMISING | avg +0.002 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.015); helped both models; average gain +0.002 is too small to tell apart from luck | subtract(pct_change(AAPL_Close, 5), pct_change(QQQ_Close, 5))
+[R4] aapl_minus_msft_cum_3d | PROMISING | avg +0.002 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.014); helped Random Forest only; average gain +0.002 is too small to tell apart from luck | subtract(pct_change(AAPL_Close, 3), pct_change(MSFT_Close, 3))
+[R12] qqq_volume_vs_move_divergence_60d | PROMISING | avg +0.002 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.044); helped Random Forest only; average gain +0.002 is too small to tell apart from luck; new information (not similar to any existing factor) | subtract(zscore(QQQ_Volume, 60), zscore(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 60))
+[R14] aapl_return_gap_x_qqq_volume_price_div | PROMISING | avg +0.001 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.020); helped Random Forest only; average gain +0.001 is too small to tell apart from luck; new information (not similar to any existing factor); worked better together with aapl_nvda_volume_range_scaled_x_qqq_div (pair +0.025, +0.001 more than the two alone added up) | multiply(subtract(pct_change(AAPL_Close, 1), pct_change(QQQ_Close, 1)), zscore(QQQ_Volume, 20))
+[R13] aapl_close_location_vs_qqq_volume_weighted | PROMISING | avg +0.001 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.019); helped Logistic Regression only; average gain +0.001 is too small to tell apart from luck; helped alone but added nothing on top of the selected team | safe_divide(subtract(multiply(2, AAPL_Close), add(AAPL_High, AAPL_Low)), subtract(AAPL_High, AAPL_Low))
+[R1] aapl_close_position_in_range | PROMISING | avg +0.001 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.019); helped Logistic Regression only; average gain +0.001 is too small to tell apart from luck; worked better together with nvda_volume_surge (pair +0.012, +0.003 more than the two alone added up) | safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low))
+[R10] aapl_intraday_vs_qqq_intraday | PROMISING | avg +0.000 | helped in 2022, 2023, 2025 but not in 2024 (worst 2024: -0.011); helped Logistic Regression only; average gain +0.000 is too small to tell apart from luck; quite similar to AAPL_minus_QQQ_1d (0.73), so little new information | subtract(safe_divide(subtract(AAPL_Close, AAPL_Open), AAPL_Open), safe_divide(subtract(QQQ_Close, QQQ_Open), QQQ_Open))
+[R15] aapl_return_sign_consistency_10d | REJECTED | avg -0.006 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.018); helped neither model; new information (not similar to any existing factor) | subtract(rolling_mean(sign(pct_change(AAPL_Close, 1)), 10), rolling_mean(sign(pct_change(QQQ_Close, 1)), 10))
+[R15] qqq_range_expansion_x_aapl_volume_gap | REJECTED | avg -0.009 | helped in 2023 but not in 2022, 2024, 2025 (worst 2024: -0.026); helped neither model | safe_divide(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), rolling_mean(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 20))
+[R15] aapl_overnight_vs_intraday_20d | REJECTED | avg -0.013 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.044); helped neither model | subtract(rolling_mean(safe_divide(AAPL_Open, lag(AAPL_Close, 1)), 10), rolling_mean(safe_divide(AAPL_Close, AAPL_Open), 10))
+[R15] aapl_minus_qqq_return_x_volume_gap_signed | REJECTED | avg -0.016 | helped in 2023 but not in 2022, 2024, 2025 (worst 2024: -0.033); helped neither model; new information (not similar to any existing factor); worked better together with aapl_nvda_volume_range_scaled_x_qqq_div (pair -0.004, +0.010 more than the two alone added up) | multiply(sign(subtract(pct_change(AAPL_Close, 1), pct_change(QQQ_Close, 1))), subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)))
+[R7] aapl_down_volume_pressure | REJECTED | avg +0.002 | helped in 2023, 2025 but not in 2022, 2024 (worst 2022: -0.018); helped both models; average gain +0.002 is too small to tell apart from luck; near-copy of AAPL_mean_return_5d (0.98) | rolling_sum(multiply(pct_change(AAPL_Close, 1), safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20))), 5)
+[R1] msft_return_zscore_20d | REJECTED | avg +0.001 | helped in 2022, 2023, 2025 but not in 2024 (worst 2024: -0.025); helped Random Forest only; average gain +0.001 is too small to tell apart from luck; near-copy of MSFT_return_1d (0.95) | zscore(pct_change(MSFT_Close, 1), 20)
+[R2] aapl_close_vs_20d_high | REJECTED | avg +0.000 | helped in 2023, 2025 but not in 2022, 2024 (worst 2022: -0.014); helped both models; average gain +0.000 is too small to tell apart from luck; near-copy of AAPL_close_to_ma20 (0.91) | subtract(safe_divide(AAPL_Close, rolling_max(AAPL_Close, 20)), 1)
+[R6] aapl_volume_vs_msft_nvda_volume | REJECTED | avg -0.000 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.022); helped Logistic Regression only | subtract(zscore(AAPL_Volume, 20), multiply(add(zscore(NVDA_Volume, 20), zscore(MSFT_Volume, 20)), 0.5))
+[R3] aapl_volume_surge_signed | REJECTED | avg -0.000 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.031); helped Random Forest only; new information (not similar to any existing factor); worked better together with msft_volume_surge (pair +0.007, +0.002 more than the two alone added up) | multiply(zscore(AAPL_Volume, 20), sign(pct_change(AAPL_Close, 1)))
+[R4] nvda_volume_surge_60d | REJECTED | avg -0.000 | helped in 2023 but not in 2022, 2024, 2025 (worst 2024: -0.043); helped Logistic Regression only; new information (not similar to any existing factor) | zscore(NVDA_Volume, 60)
+[R8] aapl_close_vs_prior_5d_low_range | REJECTED | avg -0.001 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.025); helped Logistic Regression only; quite similar to AAPL_close_to_ma20 (0.84), so little new information | safe_divide(subtract(AAPL_Close, rolling_min(AAPL_Low, 10)), subtract(rolling_max(AAPL_High, 10), rolling_min(AAPL_Low, 10)))
+[R6] aapl_minus_qqq_gap_3d_mean | REJECTED | avg -0.001 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.014); helped Logistic Regression only | rolling_mean(subtract(pct_change(AAPL_Close, 1), pct_change(QQQ_Close, 1)), 10)
+[R14] aapl_vs_qqq_volume_gap_range_scaled_5d_avg | REJECTED | avg -0.001 | helped in 2023, 2025 but not in 2022, 2024 (worst 2022: -0.029); helped Random Forest only | safe_divide(rolling_mean(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 20)), 3), add(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 0.005))
+[R14] aapl_volume_trend_slope_vs_price_move | REJECTED | avg -0.001 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.021); helped Logistic Regression only; new information (not similar to any existing factor) | subtract(zscore(rolling_mean(AAPL_Volume, 5), 60), zscore(abs(pct_change(AAPL_Close, 5)), 60))
+[R5] aapl_volume_vs_peer_volume_5d_smooth | REJECTED | avg -0.002 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.025); helped Random Forest only | subtract(zscore(rolling_mean(AAPL_Volume, 3), 20), zscore(rolling_mean(NVDA_Volume, 3), 20))
+[R6] qqq_return_vs_aapl_vol_state | REJECTED | avg -0.002 | helped in 2022, 2025 but not in 2023, 2024 (worst 2024: -0.019); helped neither model; near-copy of QQQ_return_1d (0.98) | safe_divide(pct_change(QQQ_Close, 1), rolling_std(pct_change(QQQ_Close, 1), 20))
+[R7] aapl_minus_nvda_1d_return | REJECTED | avg -0.002 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.026); helped neither model; near-copy of AAPL_minus_peer_mean_1d (0.92) | subtract(pct_change(AAPL_Close, 1), pct_change(NVDA_Close, 1))
+[R1] aapl_overnight_gap | REJECTED | avg -0.002 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.037); helped Logistic Regression only | subtract(safe_divide(AAPL_Open, lag(AAPL_Close, 1)), safe_divide(QQQ_Open, lag(QQQ_Close, 1)))
+[R14] aapl_volume_gap_vs_nvda_msft_dollar_flow | REJECTED | avg -0.002 | helped in 2025 but not in 2022, 2023, 2024 (worst 2024: -0.011); helped Random Forest only | subtract(zscore(add(multiply(NVDA_Volume, NVDA_Close), multiply(MSFT_Volume, MSFT_Close)), 20), zscore(multiply(QQQ_Volume, QQQ_Close), 20))
+[R4] aapl_vs_peer_vol_ratio | REJECTED | avg -0.002 | helped in 2023, 2025 but not in 2022, 2024 (worst 2022: -0.013); helped neither model | safe_divide(rolling_std(pct_change(AAPL_Close, 1), 10), rolling_std(pct_change(QQQ_Close, 1), 10))
+[R10] nvda_vs_msft_return_gap_lagged_mean | REJECTED | avg -0.003 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.025); helped neither model; quite similar to NVDA_cum_return_5d (0.81), so little new information | rolling_mean(subtract(pct_change(NVDA_Close, 1), pct_change(MSFT_Close, 1)), 5)
+[R3] msft_volume_surge_signed | REJECTED | avg -0.003 | helped in 2025 but not in 2022, 2023, 2024 (worst 2024: -0.012); helped neither model; new information (not similar to any existing factor) | multiply(zscore(MSFT_Volume, 20), sign(pct_change(MSFT_Close, 1)))
+[R2] qqq_close_to_ma20 | REJECTED | avg -0.003 | helped in 2023, 2025 but not in 2022, 2024 (worst 2022: -0.019); helped Logistic Regression only; quite similar to QQQ_cum_return_5d (0.75), so little new information | subtract(safe_divide(QQQ_Close, rolling_mean(QQQ_Close, 20)), 1)
+[R8] qqq_down_day_count_10d | REJECTED | avg -0.003 | helped in 2023, 2025 but not in 2022, 2024 (worst 2022: -0.015); helped Logistic Regression only | rolling_mean(sign(pct_change(QQQ_Close, 1)), 10)
+[R1] aapl_vol_ratio_5_20 | REJECTED | avg -0.003 | helped in 2023, 2025 but not in 2022, 2024 (worst 2022: -0.011); helped Random Forest only; quite similar to AAPL_volatility_5d (0.77), so little new information | safe_divide(rolling_std(pct_change(AAPL_Close, 1), 5), rolling_std(pct_change(AAPL_Close, 1), 20))
+[R13] qqq_volume_move_divergence_range_scaled_60d_vol | REJECTED | avg -0.003 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.035); helped Random Forest only; new information (not similar to any existing factor) | safe_divide(subtract(zscore(QQQ_Volume, 20), zscore(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 20)), add(rolling_std(pct_change(QQQ_Close, 1), 60), 0.004))
+[R11] aapl_drawdown_from_60d_high_vs_qqq | REJECTED | avg -0.003 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.030); helped Logistic Regression only | subtract(subtract(safe_divide(AAPL_Close, rolling_max(AAPL_Close, 60)), 1), subtract(safe_divide(QQQ_Close, rolling_max(QQQ_Close, 60)), 1))
+[R10] aapl_vs_qqq_volume_60d_vol_scaled_smooth | REJECTED | avg -0.003 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.039); helped Random Forest only; new information (not similar to any existing factor) | safe_divide(subtract(zscore(rolling_mean(AAPL_Volume, 3), 60), zscore(rolling_mean(QQQ_Volume, 3), 60)), add(rolling_std(pct_change(AAPL_Close, 1), 60), 0.005))
+[R11] qqq_range_compression_60d | REJECTED | avg -0.003 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.028); helped neither model; worked better together with aapl_vs_qqq_volume_60d_vol_scaled (pair +0.010, +0.003 more than the two alone added up) | subtract(zscore(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 5), zscore(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 60))
+[R12] aapl_range_vs_volume_efficiency | REJECTED | avg -0.004 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.015); helped neither model | subtract(zscore(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 20), zscore(AAPL_Volume, 20))
+[R3] aapl_minus_qqq_5d_volscaled | REJECTED | avg -0.004 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.021); helped neither model | safe_divide(subtract(pct_change(AAPL_Close, 5), pct_change(QQQ_Close, 5)), rolling_std(pct_change(AAPL_Close, 1), 20))
+[R13] aapl_range_share_of_qqq_range_x_volume_gap | REJECTED | avg -0.004 | helped in 2023 but not in 2022, 2024, 2025 (worst 2022: -0.012); helped neither model; new information (not similar to any existing factor) | multiply(safe_divide(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), add(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 0.002)), subtract(zscore(QQQ_Volume, 20), zscore(QQQ_Volume, 60)))
+[R5] aapl_volume_surge_vol_state | REJECTED | avg -0.005 | helped in 2025 but not in 2022, 2023, 2024 (worst 2024: -0.017); helped Logistic Regression only; worked better together with aapl_volume_vs_peer_volume (pair +0.008, +0.001 more than the two alone added up) | safe_divide(rolling_std(pct_change(QQQ_Close, 1), 5), rolling_std(pct_change(QQQ_Close, 1), 60))
+[R9] msft_nvda_volume_vs_aapl_volume_return | REJECTED | avg -0.005 | helped in 2023 but not in 2022, 2024, 2025 (worst 2024: -0.023); helped neither model; new information (not similar to any existing factor) | multiply(subtract(zscore(NVDA_Volume, 20), zscore(MSFT_Volume, 20)), sign(subtract(pct_change(NVDA_Close, 1), pct_change(MSFT_Close, 1))))
+[R3] aapl_close_position_vs_qqq_position | REJECTED | avg -0.005 | helped in 2022, 2023 but not in 2024, 2025 (worst 2024: -0.039); helped neither model; worked better together with aapl_close_position_in_range (pair -0.004, +0.000 more than the two alone added up) | subtract(safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low)), safe_divide(subtract(QQQ_Close, QQQ_Low), subtract(QQQ_High, QQQ_Low)))
+[R5] qqq_volume_change_signed_by_trend | REJECTED | avg -0.005 | helped in 2023 but not in 2022, 2024, 2025 (worst 2022: -0.010); helped neither model | subtract(zscore(QQQ_Volume, 10), zscore(QQQ_Volume, 60))
+[R10] aapl_vs_qqq_volume_60d_down_market | REJECTED | avg -0.006 | helped in 2025 but not in 2022, 2023, 2024 (worst 2022: -0.019); helped Logistic Regression only; new information (not similar to any existing factor) | multiply(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), sign(rolling_mean(pct_change(QQQ_Close, 1), 10)))
+[R8] qqq_volume_trend_vs_aapl_range | REJECTED | avg -0.006 | helped in 2023 but not in 2022, 2024, 2025 (worst 2024: -0.017); helped neither model; new information (not similar to any existing factor); worked better together with aapl_volume_vs_peer_volume (pair +0.008, +0.002 more than the two alone added up) | subtract(zscore(QQQ_Volume, 5), zscore(subtract(QQQ_High, QQQ_Low), 20))
+[R2] aapl_close_position_zscore_5d | REJECTED | avg -0.006 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.020); helped neither model | zscore(safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low)), 5)
+[R1] qqq_vol_ratio_5_20 | REJECTED | avg -0.006 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.022); helped neither model; new information (not similar to any existing factor) | safe_divide(rolling_std(pct_change(QQQ_Close, 1), 5), rolling_std(pct_change(QQQ_Close, 1), 20))
+[R8] aapl_lag_return_2d_vs_msft | REJECTED | avg -0.006 | helped in 2023 but not in 2022, 2024, 2025 (worst 2024: -0.011); helped neither model | subtract(lag(pct_change(MSFT_Close, 1), 1), lag(pct_change(AAPL_Close, 1), 1))
+[R9] aapl_updown_volume_asymmetry_10d | REJECTED | avg -0.007 | helped in 2023 but not in 2022, 2024, 2025 (worst 2024: -0.028); helped neither model; quite similar to AAPL_cum_return_10d (0.79), so little new information | safe_divide(rolling_sum(multiply(AAPL_Volume, sign(pct_change(AAPL_Close, 1))), 10), rolling_sum(AAPL_Volume, 10))
+[R5] aapl_high_vs_prev_close_gap | REJECTED | avg -0.007 | helped in 2022, 2025 but not in 2023, 2024 (worst 2024: -0.033); helped neither model; quite similar to AAPL_return_1d (0.89), so little new information | subtract(safe_divide(AAPL_High, lag(AAPL_Close, 1)), safe_divide(lag(AAPL_Close, 1), AAPL_Low))
+[R10] qqq_down_day_volume_stress | REJECTED | avg -0.007 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.028); helped Logistic Regression only; new information (not similar to any existing factor) | multiply(zscore(QQQ_Volume, 60), sign(pct_change(QQQ_Close, 5)))
+[R6] msft_nvda_minus_qqq_5d | REJECTED | avg -0.008 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.027); helped neither model; quite similar to NVDA_cum_return_5d (0.79), so little new information | subtract(multiply(add(pct_change(MSFT_Close, 5), pct_change(NVDA_Close, 5)), 0.5), pct_change(QQQ_Close, 5))
+[R12] msft_volume_vs_aapl_volume_range_scaled | REJECTED | avg -0.009 | helped in 2023 but not in 2022, 2024, 2025 (worst 2022: -0.020); helped Logistic Regression only; worked better together with qqq_volume_vs_price_divergence (pair +0.011, +0.002 more than the two alone added up) | safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(MSFT_Volume, 20)), add(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 0.005))
+[R4] qqq_return_zscore_10d | REJECTED | avg -0.009 | helped in 2023 but not in 2022, 2024, 2025 (worst 2024: -0.025); helped neither model; near-copy of QQQ_return_1d (0.92) | zscore(pct_change(QQQ_Close, 1), 10)
+[R6] aapl_volume_price_range_pressure | REJECTED | avg -0.010 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.045); helped neither model; near-copy of AAPL_volume_to_ma20 (0.92) | multiply(zscore(AAPL_Volume, 20), safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close))
+[R9] aapl_range_vs_qqq_range_ratio_vol_gap | REJECTED | avg -0.010 | helped in 2023 but not in 2022, 2024, 2025 (worst 2025: -0.037); helped neither model | subtract(zscore(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 20), zscore(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 20))
+[R14] aapl_dollar_volume_vs_msft_dollar_volume_trend | REJECTED | avg -0.010 | helped in 2023 but not in 2022, 2024, 2025 (worst 2024: -0.027); helped Logistic Regression only | subtract(zscore(multiply(AAPL_Volume, AAPL_Close), 60), zscore(multiply(MSFT_Volume, MSFT_Close), 60))
+[R7] qqq_trend_regime_20_60 | REJECTED | avg -0.011 | helped in 2023 but not in 2022, 2024, 2025 (worst 2024: -0.050); helped neither model | subtract(safe_divide(rolling_mean(QQQ_Close, 20), rolling_mean(QQQ_Close, 60)), 1)
+[R6] aapl_vs_qqq_volume_surge_5d | REJECTED | avg -0.012 | helped in 2023 but not in 2022, 2024, 2025 (worst 2022: -0.026); helped neither model; new information (not similar to any existing factor) | subtract(zscore(rolling_mean(AAPL_Volume, 5), 60), zscore(rolling_mean(QQQ_Volume, 5), 60))
+[R11] msft_nvda_return_vs_aapl_volume_confirm | REJECTED | avg -0.012 | helped in 2023 but not in 2022, 2024, 2025 (worst 2024: -0.031); helped neither model; new information (not similar to any existing factor); worked better together with aapl_volume_vs_peer_volume (pair -0.001, +0.011 more than the two alone added up) | multiply(subtract(multiply(add(pct_change(MSFT_Close, 1), pct_change(NVDA_Close, 1)), 0.5), pct_change(QQQ_Close, 1)), zscore(QQQ_Volume, 60))
+[R1] peer_dispersion_5d | REJECTED | avg -0.012 | helped in 2023, 2025 but not in 2022, 2024 (worst 2024: -0.057); helped neither model; new information (not similar to any existing factor) | abs(subtract(pct_change(NVDA_Close, 5), pct_change(MSFT_Close, 5)))
+[R11] aapl_gap_fill_persistence | REJECTED | avg -0.014 | helped in 2025 but not in 2022, 2023, 2024 (worst 2023: -0.022); helped neither model; new information (not similar to any existing factor) | multiply(subtract(safe_divide(AAPL_Open, lag(AAPL_Close, 1)), 1), sign(subtract(AAPL_Close, AAPL_Open)))
+[R5] aapl_minus_qqq_with_volume_confirm | REJECTED | avg -0.016 | helped in 2023 but not in 2022, 2024, 2025 (worst 2025: -0.044); helped neither model; new information (not similar to any existing factor); worked better together with nvda_volume_surge (pair -0.003, +0.004 more than the two alone added up) | multiply(subtract(pct_change(AAPL_Close, 1), pct_change(QQQ_Close, 1)), zscore(NVDA_Volume, 20))
+[R2] aapl_gap_sign_vs_prev_close | INVALID | avg n/a | could not be used: constant or missing in a training/validation quarter | sign(subtract(safe_divide(AAPL_Open, lag(AAPL_Close, 1)), safe_divide(QQQ_Open, lag(QQQ_Close, 1))))
+[R13] aapl_vs_qqq_volume_surge_60d_base_trend_gated | INVALID | avg n/a | could not be used: nested deeper than 6 | multiply(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), subtract(1, abs(sign(subtract(safe_divide(QQQ_Close, rolling_mean(QQQ_Close, 60)), 1)))))
+
+FORMULA LANGUAGE
+Nested function calls only, no + - * / symbols. Windows n must be one of (1, 2, 3, 5, 10, 20, 60).
+- pct_change(x, n): x(t) / x(t-n) - 1
+- lag(x, n): x(t-n)
+- diff(x, n): x(t) - x(t-n)
+- rolling_mean(x, n): mean of the last n values, ending at t
+- rolling_std(x, n): sample std (ddof=1) of the last n values, ending at t (n >= 2)
+- rolling_min(x, n): min of the last n values, ending at t
+- rolling_max(x, n): max of the last n values, ending at t
+- rolling_sum(x, n): sum of the last n values, ending at t
+- zscore(x, n): (x(t) - rolling_mean(x, n)) / rolling_std(x, n) (n >= 2)
+- add(a, b): a + b
+- subtract(a, b): a - b
+- multiply(a, b): a * b
+- safe_divide(a, b): a / b, missing when |b| < 1e-12
+- abs(x): |x|
+- sign(x): -1, 0 or +1
+- log(x): natural log, missing when x <= 0
+Example: safe_divide(rolling_std(pct_change(AAPL_Close, 1), 5), rolling_std(pct_change(QQQ_Close, 1), 20))
+
+TASK
+1. Write a one-sentence lesson for each of these factors from the previous round: qqq_volume_move_divergence_vol_regime_gated, aapl_vs_qqq_volume_surge_vs_vol_ratio, aapl_overnight_vs_intraday_20d, aapl_return_sign_consistency_10d, qqq_range_expansion_x_aapl_volume_gap, aapl_minus_qqq_return_x_volume_gap_signed
+2. Propose 2 IMPROVE factors: pick factors from the notebook that helped in some years or for one model,
+   say in the hypothesis why they probably failed where they failed, and change them to fix that. Parent = that factor.
+3. Propose 2 NEW factors: genuinely different ideas from everything in the notebook. Parent is empty.
+4. Propose 2 PARTNER factors: each designed to work together with one factor on the selected team or the
+   promising list (parent = that factor), with a different role. For example, if the parent describes the market
+   condition, design one that describes Apple's relative move, and the other way round.
+Label every factor with its role. Do not resubmit any formula from the notebook.
+Answer ONLY by calling the tool propose_factors (no other text).

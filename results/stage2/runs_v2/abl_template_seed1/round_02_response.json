@@ -1,0 +1,54 @@
+{
+  "reflection": "template formulas (no LLM)",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "template_761111",
+      "mode": "improve",
+      "parent": "",
+      "role": "",
+      "formula": "safe_divide(subtract(AAPL_Close, AAPL_Open), subtract(AAPL_High, AAPL_Low))",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_579715",
+      "mode": "improve",
+      "parent": "",
+      "role": "",
+      "formula": "safe_divide(subtract(QQQ_Close, QQQ_Open), subtract(QQQ_High, QQQ_Low))",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_998500",
+      "mode": "new",
+      "parent": "",
+      "role": "",
+      "formula": "subtract(safe_divide(MSFT_Close, rolling_max(MSFT_High, 60)), 1)",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_104857",
+      "mode": "new",
+      "parent": "",
+      "role": "",
+      "formula": "subtract(pct_change(QQQ_Close, 60), pct_change(MSFT_Close, 60))",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_779245",
+      "mode": "partner",
+      "parent": "template_945215",
+      "role": "",
+      "formula": "safe_divide(subtract(MSFT_Close, MSFT_Open), subtract(MSFT_High, MSFT_Low))",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_532380",
+      "mode": "partner",
+      "parent": "template_495185",
+      "role": "",
+      "formula": "safe_divide(subtract(QQQ_Close, QQQ_Open), subtract(QQQ_High, QQQ_Low))",
+      "hypothesis": "template formula (no LLM)"
+    }
+  ]
+}

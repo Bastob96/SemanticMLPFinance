@@ -1,0 +1,85 @@
+{
+  "reflection": "Volume-contrast factors (AAPL vs QQQ/NVDA volume z-scores) are the only family that clears bars; they help 2023 and 2025 and fail in 2022 and 2024. Scaling by Apple's range or volatility reduced the 2024 loss, and the range-scaled NVDA version joined the team. The best pair was the 60d-vol-scaled ratio with qqq_volume_vs_price_divergence (4/4 years). Price-only and gap-type factors keep failing, so I will stay in the volume family, use range/vol scaling, and test QQQ-volume-divergence variants and a partner for the range-scaled team factor.",
+  "lessons": [
+    {
+      "name": "aapl_vs_qqq_volume_60d_vol_scaled_ratio",
+      "lesson": "Dividing by 60d Apple volatility kept the 2023/2025 gains and helped the team 3/4 years, and it complements QQQ volume divergence, but 2022 and 2024 alone still lose."
+    },
+    {
+      "name": "aapl_vs_nvda_volume_surge_range_scaled",
+      "lesson": "Scaling the volume contrast by today's range is better than by past volatility because it adapts to the current day's turbulence and helped both models, though 2024 still lost."
+    },
+    {
+      "name": "aapl_drawdown_from_60d_high_vs_qqq",
+      "lesson": "Relative drawdown is a price-level trend measure that overlaps existing momentum factors and flipped sign in 2024."
+    },
+    {
+      "name": "aapl_gap_fill_persistence",
+      "lesson": "Gap times intraday direction is noisy and only worked in 2025, so overnight/intraday gap structure carries little next-day information."
+    },
+    {
+      "name": "qqq_range_compression_60d",
+      "lesson": "QQQ range compression is a slow volatility regime proxy that lost in 2022 and 2024 and added nothing even in pairs."
+    },
+    {
+      "name": "msft_nvda_return_vs_aapl_volume_confirm",
+      "lesson": "Multiplying a peer-vs-QQQ return gap by QQQ volume produced a noisy product that hurt in nearly every year."
+    }
+  ],
+  "factors": [
+    {
+      "name": "aapl_vs_qqq_volume_range_scaled",
+      "mode": "improve",
+      "parent": "aapl_vs_qqq_volume_60d_vol_scaled_ratio",
+      "role": "relative_move",
+      "formula": "safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), add(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 0.005))",
+      "hypothesis": "The 60d-vol-scaled ratio lost in 2022 and 2024 probably because slow volatility doesn't reflect today's conditions; the range scaling that worked for the NVDA version should adapt the QQQ contrast to the current day."
+    },
+    {
+      "name": "qqq_volume_vs_move_divergence_60d",
+      "mode": "improve",
+      "parent": "qqq_volume_vs_price_divergence",
+      "role": "market_condition",
+      "formula": "subtract(zscore(QQQ_Volume, 60), zscore(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 60))",
+      "hypothesis": "The divergence using absolute close return lost in 2024; using intraday range and a 60d baseline gives a steadier measure of volume not explained by price movement and may be less regime-dependent."
+    },
+    {
+      "name": "aapl_dollar_volume_vs_qqq_dollar_volume",
+      "mode": "new",
+      "parent": "",
+      "role": "relative_move",
+      "formula": "subtract(zscore(multiply(AAPL_Volume, AAPL_Close), 20), zscore(multiply(QQQ_Volume, QQQ_Close), 20))",
+      "hypothesis": "Dollar-volume participation compares Apple's capital flow with the market's, adjusting for price level drift that share volume ignores."
+    },
+    {
+      "name": "aapl_range_vs_volume_efficiency",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "subtract(zscore(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 20), zscore(AAPL_Volume, 20))",
+      "hypothesis": "Range that is large relative to volume (or small with heavy volume) signals absorption or thin trading, which may predict reversal in the next day."
+    },
+    {
+      "name": "aapl_nvda_volume_range_scaled_x_qqq_div",
+      "mode": "partner",
+      "parent": "aapl_vs_nvda_volume_surge_range_scaled",
+      "role": "market_condition",
+      "formula": "safe_divide(subtract(zscore(QQQ_Volume, 20), zscore(abs(pct_change(QQQ_Close, 1)), 20)), add(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 0.005))",
+      "hypothesis": "The team's range-scaled Apple volume factor paired well with QQQ volume divergence in earlier tests; scaling the market divergence by QQQ range makes a market-state partner on the same scale."
+    },
+    {
+      "name": "msft_volume_vs_aapl_volume_range_scaled",
+      "mode": "partner",
+      "parent": "qqq_volume_vs_price_divergence",
+      "role": "peer_lead",
+      "formula": "safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(MSFT_Volume, 20)), add(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 0.005))",
+      "hypothesis": "Adds a MSFT-based peer volume contrast to the market divergence factor; MSFT is the peer whose return is most useful, and range scaling worked for the NVDA variant."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 24252,
+    "output_tokens": 2006
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

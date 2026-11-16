@@ -1,0 +1,9 @@
+round,team_size,joined,promising,pairs_tried,pairs_joined,mean_alone_gain,team,seconds
+1,0,0,0,0,0,-0.0037249810167808792,,33.0
+2,0,0,0,0,0,-0.0027444787203418823,,29.4
+3,0,0,1,0,0,-0.0023405390373101216,,33.2
+4,0,0,2,1,0,-0.0010871929470075193,,35.2
+5,0,0,5,6,0,-0.0010645307200613993,,46.6
+6,0,0,8,6,0,0.00037701757250991133,,48.3
+7,3,3,9,6,1,0.0029960444322656723,aapl_volume_surge_vs_nvda_log|nvda_volume_surge_log|aapl_volume_surge_vs_60d_minus_qqq,90.7
+8,3,0,14,6,0,0.0037998124974627655,aapl_volume_surge_vs_nvda_log|nvda_volume_surge_log|aapl_volume_surge_vs_60d_minus_qqq,74.7

@@ -1,0 +1,12 @@
+[
+  {
+    "name": "aapl_volume_surge_vs_nvda_log",
+    "formula": "subtract(log(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20))), log(safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 20))))",
+    "hypothesis": "The parent's gap is driven by extreme ratio spikes in either stock; taking logs of each ratio before subtracting makes the relative surge symmetric and less dominated by one-day outliers, which may fix the 2022 and 2024 misses.",
+    "round": 7,
+    "how_selected": "team trial, round 7",
+    "auc_gain": 0.014520046325513087,
+    "years_helped": 3,
+    "team_gain": 0.014520046325513087
+  }
+]

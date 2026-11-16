@@ -1,0 +1,85 @@
+{
+  "reflection": "The notebook shows that volume-contrast factors (AAPL vs QQQ/NVDA volume z-scores, QQQ volume vs move size) gain in 2023 and 2025 but lose in 2022 and 2024, for both LR and RF. Price-based and range-position factors mostly fail. Pairs get 4/4 years but with little synergy beyond the sum of the two, so the team bar is hard to reach. The 2024 loss looks like a low-volatility trending regime where volume z-scores are noise, so I will try to gate or normalize the volume signals by regime. I will also try new directions that are not volume z-scores: multi-day overnight/intraday decomposition, and return autocorrelation or sign-consistency features.",
+  "lessons": [
+    {
+      "name": "qqq_volume_price_divergence_60d_range_scaled",
+      "lesson": "The 60d window kept the QQQ volume-vs-move signal but lost in 2024 again, so a slower window did not fix the regime dependence and the pairs showed no synergy."
+    },
+    {
+      "name": "aapl_vs_qqq_volume_gap_range_scaled_5d_avg",
+      "lesson": "Averaging the volume gap over 3 days blurred the one-day signal and failed both 2022 and 2024, so the information is in the single-day spike."
+    },
+    {
+      "name": "aapl_dollar_volume_vs_msft_dollar_volume_trend",
+      "lesson": "Slow 60d dollar volume gap against MSFT was noise with a large loss, so MSFT is a poor volume baseline for Apple."
+    },
+    {
+      "name": "aapl_volume_trend_slope_vs_price_move",
+      "lesson": "A 5d volume trend versus 5d absolute move was too slow and hurt in 2024, helping only LR slightly."
+    },
+    {
+      "name": "aapl_return_gap_x_qqq_volume_price_div",
+      "lesson": "Multiplying the AAPL-QQQ return gap by QQQ volume z-score was nearly neutral and only RF noticed, so the interaction added little beyond the plain volume factors."
+    },
+    {
+      "name": "aapl_volume_gap_vs_nvda_msft_dollar_flow",
+      "lesson": "Dollar flow of NVDA+MSFT versus QQQ was far from Apple's own behaviour and gave only a 2025 RF gain, so it is mostly noise."
+    }
+  ],
+  "factors": [
+    {
+      "name": "qqq_volume_move_divergence_vol_regime_gated",
+      "mode": "improve",
+      "parent": "aapl_nvda_volume_range_scaled_x_qqq_div",
+      "role": "market_condition",
+      "formula": "safe_divide(subtract(zscore(QQQ_Volume, 20), zscore(abs(pct_change(QQQ_Close, 1)), 20)), add(rolling_std(pct_change(QQQ_Close, 1), 20), 0.004))",
+      "hypothesis": "The parent lost in 2024, probably because the calm low-vol regime made the range denominator tiny and noisy; scaling by QQQ's 20d return volatility ties it to the regime level and should stabilise 2024."
+    },
+    {
+      "name": "aapl_vs_qqq_volume_surge_vs_vol_ratio",
+      "mode": "improve",
+      "parent": "aapl_vs_qqq_volume_surge_60d_base",
+      "role": "relative_move",
+      "formula": "multiply(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), safe_divide(rolling_std(pct_change(AAPL_Close, 1), 5), add(rolling_std(pct_change(AAPL_Close, 1), 60), 0.002)))",
+      "hypothesis": "The volume contrast fails in 2022 and 2024 when volume spikes carry no information; weighting it by short-vs-long Apple volatility keeps it only when Apple is actually turbulent."
+    },
+    {
+      "name": "aapl_overnight_vs_intraday_20d",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "subtract(rolling_mean(safe_divide(AAPL_Open, lag(AAPL_Close, 1)), 10), rolling_mean(safe_divide(AAPL_Close, AAPL_Open), 10))",
+      "hypothesis": "Persistent overnight drift versus intraday drift over 10 days captures institutional versus retail flow balance, which is a different kind of information from volume z-scores or close-to-close returns."
+    },
+    {
+      "name": "aapl_return_sign_consistency_10d",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "subtract(rolling_mean(sign(pct_change(AAPL_Close, 1)), 10), rolling_mean(sign(pct_change(QQQ_Close, 1)), 10))",
+      "hypothesis": "The fraction of up days for Apple versus QQQ over 10 days measures breadth of Apple's relative strength and is robust to outliers, unlike mean returns."
+    },
+    {
+      "name": "qqq_range_expansion_x_aapl_volume_gap",
+      "mode": "partner",
+      "parent": "aapl_vs_nvda_volume_surge_range_scaled",
+      "role": "market_condition",
+      "formula": "safe_divide(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), rolling_mean(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 20))",
+      "hypothesis": "The team factor uses Apple's range to scale volume; QQQ range relative to its 20d average describes market-wide turbulence, which should tell when Apple's volume contrast matters."
+    },
+    {
+      "name": "aapl_minus_qqq_return_x_volume_gap_signed",
+      "mode": "partner",
+      "parent": "aapl_nvda_volume_range_scaled_x_qqq_div",
+      "role": "relative_move",
+      "formula": "multiply(sign(subtract(pct_change(AAPL_Close, 1), pct_change(QQQ_Close, 1))), subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)))",
+      "hypothesis": "Signing Apple's volume surge by whether it beat QQQ today adds direction to the market volume-stress parent, describing whether Apple's relative move is confirmed by volume."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 28908,
+    "output_tokens": 2156
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

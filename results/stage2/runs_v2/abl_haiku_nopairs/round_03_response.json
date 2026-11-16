@@ -1,0 +1,54 @@
+{
+  "reflection": "replay of abl_claude_haiku, round 3",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "aapl_intraday_range_smooth_10d",
+      "mode": "improve",
+      "parent": "AAPL_volatility_10d",
+      "role": "apple_own",
+      "formula": "rolling_mean(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 10)",
+      "hypothesis": "AAPL_volatility_10d is built from close-to-close returns, which are noisy and can be dominated by a single gap day; a 10-day mean of the high-low range uses intraday information instead, so it should be less redundant with the return-based volatility factors and carry a different volatility signal in years such as 2024 when the close-to-close measure failed."
+    },
+    {
+      "name": "msft_cum_return_10d",
+      "mode": "improve",
+      "parent": "MSFT_return_1d",
+      "role": "peer_lead",
+      "formula": "pct_change(MSFT_Close, 10)",
+      "hypothesis": "MSFT_return_1d is a single noisy day that helped in some years and not others; a 10-day MSFT return captures a slower peer trend that may lead Apple's next move and is less similar to the existing 1-day and 5-day MSFT returns."
+    },
+    {
+      "name": "qqq_volume_to_ma20",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "subtract(safe_divide(QQQ_Volume, rolling_mean(QQQ_Volume, 20)), 1)",
+      "hypothesis": "Abnormal volume in the broad tech index signals market-wide participation or stress, which is a market state not represented by any existing factor; it uses QQQ volume rather than Apple volume."
+    },
+    {
+      "name": "aapl_intraday_return",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "safe_divide(subtract(AAPL_Close, AAPL_Open), AAPL_Open)",
+      "hypothesis": "The same-day return from open to close captures intraday buying or selling pressure, which is distinct from the overnight gap that was tested and rejected in round 2."
+    },
+    {
+      "name": "aapl_rel_qqq_cum_10d",
+      "mode": "partner",
+      "parent": "AAPL_volatility_10d",
+      "role": "relative_move",
+      "formula": "subtract(pct_change(AAPL_Close, 10), pct_change(QQQ_Close, 10))",
+      "hypothesis": "Apple's 10-day performance relative to QQQ measures whether Apple is under- or over-performing the market; combined with the volatility level it may show whether relative weakness in a high-volatility regime tends to reverse."
+    },
+    {
+      "name": "qqq_vol_20d",
+      "mode": "partner",
+      "parent": "MSFT_return_1d",
+      "role": "market_condition",
+      "formula": "rolling_std(pct_change(QQQ_Close, 1), 20)",
+      "hypothesis": "The 20-day realised volatility of the broad market describes the regime in which a one-day MSFT move carries information, so the pair may show that the peer-lead signal works only in calm markets."
+    }
+  ]
+}

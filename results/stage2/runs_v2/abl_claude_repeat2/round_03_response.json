@@ -1,0 +1,85 @@
+{
+  "reflection": "Across two rounds nothing has passed; most factors help in 2023 and 2025 but fail in 2024, and single-day Apple-only shape features (close position, gap) mostly help only LR. Peer-based signals (MSFT/NVDA moves, dispersion) show some RF life. I will try peer-lead and volume-based ideas, smoothed or scaled by volatility, and avoid near-copies of existing return/MA features. Volume signals and cross-asset volume are untested, so I will try them.",
+  "lessons": [
+    {
+      "name": "aapl_close_position_mean3",
+      "lesson": "Smoothing the close position over 3 days diluted the single-day signal and became similar to short-term mean returns, so it hurt RF and failed in 3 of 4 years."
+    },
+    {
+      "name": "aapl_gap_vol_scaled",
+      "lesson": "Scaling the gap by volatility helped LR in 2022 but RF overfit the ratio's heavy tails, so it flipped negative in 2023-2024."
+    },
+    {
+      "name": "aapl_range_position_20d",
+      "lesson": "It was effectively a near-copy of close_to_ma20 (0.93), so it added no information and just added noise."
+    },
+    {
+      "name": "peer_dispersion_1d",
+      "lesson": "Absolute MSFT-NVDA disagreement is new information that helped RF in three years, but its effect was unstable in 2024 when peers moved in a strong trend."
+    },
+    {
+      "name": "aapl_up_volume_signed",
+      "lesson": "The formula used an invalid placeholder input, so it was never tested; rebuild it using valid volume ratios."
+    },
+    {
+      "name": "qqq_close_to_ma20_gap",
+      "lesson": "QQQ distance from its MA20 duplicates QQQ 5d return trend and flips sign across regimes (bad in 2022), so it added little."
+    }
+  ],
+  "factors": [
+    {
+      "name": "peer_dispersion_z20",
+      "mode": "improve",
+      "parent": "peer_dispersion_1d",
+      "role": "market_condition",
+      "formula": "zscore(abs(subtract(pct_change(MSFT_Close, 1), pct_change(NVDA_Close, 1))), 20)",
+      "hypothesis": "Raw dispersion failed in 2024 because its level scales with the volatility regime; z-scoring against the last 20 days makes it regime-neutral while keeping the RF-useful peer disagreement information."
+    },
+    {
+      "name": "aapl_close_position_range_sign_vol",
+      "mode": "improve",
+      "parent": "aapl_close_position_range",
+      "role": "apple_own",
+      "formula": "multiply(subtract(safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low)), 0.5), safe_divide(subtract(AAPL_High, AAPL_Low), rolling_mean(subtract(AAPL_High, AAPL_Low), 20)))",
+      "hypothesis": "Close position was noisy because it ignores whether the range was large; weighting by relative range size emphasises days with meaningful intraday conviction and should stabilise 2024."
+    },
+    {
+      "name": "aapl_signed_volume_surge",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "multiply(sign(pct_change(AAPL_Close, 1)), safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20)))",
+      "hypothesis": "High-volume up days versus high-volume down days indicate accumulation or distribution that may continue or reverse the next day; volume is only used unsigned in existing factors."
+    },
+    {
+      "name": "nvda_qqq_volume_ratio_change",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "subtract(safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 20)), safe_divide(QQQ_Volume, rolling_mean(QQQ_Volume, 20)))",
+      "hypothesis": "Unusual NVDA trading activity relative to the broad tech market signals sector risk appetite shifts or rotation that may affect Apple the next day."
+    },
+    {
+      "name": "aapl_rel_peer_volume_gap",
+      "mode": "partner",
+      "parent": "peer_dispersion_1d",
+      "role": "relative_move",
+      "formula": "subtract(pct_change(AAPL_Close, 3), multiply(add(pct_change(MSFT_Close, 3), pct_change(NVDA_Close, 3)), 0.5))",
+      "hypothesis": "When peers disagree strongly, Apple's 3-day performance relative to the peer average may mean revert more; this gives the dispersion factor a directional relative-move partner."
+    },
+    {
+      "name": "msft_lead_qqq_residual",
+      "mode": "partner",
+      "parent": "aapl_close_position_range",
+      "role": "peer_lead",
+      "formula": "subtract(pct_change(MSFT_Close, 1), pct_change(QQQ_Close, 1))",
+      "hypothesis": "MSFT's idiosyncratic move versus QQQ is a peer-lead signal that complements Apple's close location: a weak close with MSFT strength could indicate catch-up next day."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 8520,
+    "output_tokens": 1758
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

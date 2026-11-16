@@ -1,0 +1,85 @@
+{
+  "reflection": "Volume-attention factors (NVDA/MSFT/AAPL volume z-scores) are the only ones with repeated positive signs, helping 2023 and 2025 but hurting 2022 and 2024; no pair has beaten the sum of its parts. Return-based and intraday-position factors flip sign across regimes. Longer windows (60d) and sign-multiplying destroyed the volume signal. I will try volume measures that are scale-free across regimes (QQQ volume, volume relative to its own longer-run level, volume changes), and volume combined with volatility state so the effect does not flip between high-vol 2022 and low-vol 2024.",
+  "lessons": [
+    {
+      "name": "peer_volume_surge_mean",
+      "lesson": "Averaging NVDA and MSFT volume z-scores kept the 2023/2025 gains and 2022/2024 losses, so combining them added no stability."
+    },
+    {
+      "name": "nvda_volume_surge_60d",
+      "lesson": "A 60d baseline made the surge a slow level measure that lost the short-term attention signal and only helped in 2023."
+    },
+    {
+      "name": "aapl_vs_peer_vol_ratio",
+      "lesson": "Ratio of Apple to QQQ volatility is a noisy rescaling of Apple vol that hurt in 2022 and 2024 and helped neither model."
+    },
+    {
+      "name": "qqq_return_zscore_10d",
+      "lesson": "Z-scoring QQQ's return was a near-copy of QQQ_return_1d and added only noise."
+    },
+    {
+      "name": "aapl_volume_vs_peer_volume",
+      "lesson": "Apple's volume surge relative to NVDA's helped both models in 2023 and 2025 but failed in 2022 and 2024, making it the best but still regime-dependent volume signal."
+    },
+    {
+      "name": "aapl_minus_msft_cum_3d",
+      "lesson": "Three-day relative performance vs MSFT overlaps Apple's own short momentum and its sign flips across regimes, so gain was negligible."
+    }
+  ],
+  "factors": [
+    {
+      "name": "aapl_volume_vs_peer_volume_5d_smooth",
+      "mode": "improve",
+      "parent": "aapl_volume_vs_peer_volume",
+      "role": "apple_own",
+      "formula": "subtract(zscore(rolling_mean(AAPL_Volume, 3), 20), zscore(rolling_mean(NVDA_Volume, 3), 20))",
+      "hypothesis": "The daily version is noisy and failed in 2022/2024; smoothing volume over 3 days should reduce single-day spikes and give a steadier attention-gap signal."
+    },
+    {
+      "name": "aapl_vs_qqq_volume_surge",
+      "mode": "improve",
+      "parent": "aapl_volume_vs_peer_volume",
+      "role": "relative_move",
+      "formula": "subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 20))",
+      "hypothesis": "NVDA volume is idiosyncratic and drove the 2022/2024 failures; QQQ volume is a broader market-activity baseline so the Apple-specific volume excess should be more stable."
+    },
+    {
+      "name": "qqq_volume_change_signed_by_trend",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "subtract(zscore(QQQ_Volume, 10), zscore(QQQ_Volume, 60))",
+      "hypothesis": "Short-vs-long market volume activity captures regime shifts in participation (capitulation or calm) not covered by any factor so far."
+    },
+    {
+      "name": "aapl_high_vs_prev_close_gap",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "subtract(safe_divide(AAPL_High, lag(AAPL_Close, 1)), safe_divide(lag(AAPL_Close, 1), AAPL_Low))",
+      "hypothesis": "Compares upside vs downside excursion from yesterday's close using high and low, a skew in intraday extremes that return and range factors miss."
+    },
+    {
+      "name": "aapl_volume_surge_vol_state",
+      "mode": "partner",
+      "parent": "aapl_volume_vs_peer_volume",
+      "role": "market_condition",
+      "formula": "safe_divide(rolling_std(pct_change(QQQ_Close, 1), 5), rolling_std(pct_change(QQQ_Close, 1), 60))",
+      "hypothesis": "The volume signal changes meaning between high-vol (2022) and low-vol regimes; a market vol-state variable lets models condition on it, complementing the volume gap."
+    },
+    {
+      "name": "aapl_minus_qqq_with_volume_confirm",
+      "mode": "partner",
+      "parent": "nvda_volume_surge",
+      "role": "relative_move",
+      "formula": "multiply(subtract(pct_change(AAPL_Close, 1), pct_change(QQQ_Close, 1)), zscore(NVDA_Volume, 20))",
+      "hypothesis": "Apple's relative move matters differently when attention (NVDA volume) is high; the interaction gives the model the conditional relation that additive terms cannot."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 14657,
+    "output_tokens": 1732
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

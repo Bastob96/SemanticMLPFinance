@@ -1,0 +1,54 @@
+{
+  "reflection": "template formulas (no LLM)",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "template_237961",
+      "mode": "improve",
+      "parent": "",
+      "role": "",
+      "formula": "safe_divide(rolling_std(pct_change(AAPL_Close, 1), 60), rolling_std(pct_change(NVDA_Close, 1), 60))",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_424101",
+      "mode": "improve",
+      "parent": "",
+      "role": "",
+      "formula": "zscore(MSFT_Volume, 20)",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_691236",
+      "mode": "new",
+      "parent": "",
+      "role": "",
+      "formula": "safe_divide(rolling_std(pct_change(AAPL_Close, 1), 60), rolling_std(pct_change(QQQ_Close, 1), 60))",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_543873",
+      "mode": "new",
+      "parent": "",
+      "role": "",
+      "formula": "zscore(QQQ_Volume, 20)",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_597687",
+      "mode": "partner",
+      "parent": "template_945215",
+      "role": "",
+      "formula": "zscore(QQQ_Volume, 20)",
+      "hypothesis": "template formula (no LLM)"
+    },
+    {
+      "name": "template_434555",
+      "mode": "partner",
+      "parent": "template_104857",
+      "role": "",
+      "formula": "rolling_mean(multiply(sign(pct_change(MSFT_Close, 1)), zscore(MSFT_Volume, 60)), 20)",
+      "hypothesis": "template formula (no LLM)"
+    }
+  ]
+}

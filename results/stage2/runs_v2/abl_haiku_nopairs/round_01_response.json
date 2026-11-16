@@ -1,0 +1,54 @@
+{
+  "reflection": "replay of abl_claude_haiku, round 1",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "aapl_vol10_to_vol60_ratio",
+      "mode": "improve",
+      "parent": "AAPL_volatility_10d",
+      "role": "apple_own",
+      "formula": "safe_divide(rolling_std(pct_change(AAPL_Close, 1), 10), rolling_std(pct_change(AAPL_Close, 1), 60))",
+      "hypothesis": "Raw 10-day volatility level shifts a lot between regimes (2.2% in 2022 vs 1.3% in 2023), so a fixed threshold learned in Q1-Q2 may not transfer to Q3. Dividing by the 60-day volatility turns it into a regime-relative measure of whether volatility is rising or falling."
+    },
+    {
+      "name": "msft_return_1d_zscore20",
+      "mode": "improve",
+      "parent": "MSFT_return_1d",
+      "role": "peer_lead",
+      "formula": "zscore(pct_change(MSFT_Close, 1), 20)",
+      "hypothesis": "MSFT's one-day return signal probably changes scale across years, so the raw value is hard to compare between training and validation periods. Standardising it against its own 20-day distribution should make a large MSFT move mean the same thing in every year."
+    },
+    {
+      "name": "qqq_range_10d_mean",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "rolling_mean(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 10)",
+      "hypothesis": "The average intraday range of QQQ over 10 days measures how stressed the broad tech market is. Intraday range is not captured by any existing factor, and it may show whether Apple tends to continue or reverse in calm versus stressed tech conditions."
+    },
+    {
+      "name": "aapl_close_location_3d",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "rolling_mean(safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low)), 3)",
+      "hypothesis": "Where Apple closes within its daily high-low range shows whether buyers or sellers controlled the session, and a 3-day average smooths this. It uses intraday information that the existing factors (which use only closes and range size) do not."
+    },
+    {
+      "name": "aapl_minus_msft_cum_5d",
+      "mode": "partner",
+      "parent": "NVDA_cum_return_5d",
+      "role": "relative_move",
+      "formula": "subtract(pct_change(AAPL_Close, 5), pct_change(MSFT_Close, 5))",
+      "hypothesis": "NVDA_cum_return_5d describes the AI-driven peer trend, and this factor measures Apple's 5-day move relative to MSFT. Together they separate Apple leadership from a broad semiconductor-led rally, which neither captures alone."
+    },
+    {
+      "name": "peer_disagreement_5d_mean",
+      "mode": "partner",
+      "parent": "MSFT_return_1d",
+      "role": "market_condition",
+      "formula": "rolling_mean(abs(subtract(pct_change(NVDA_Close, 1), pct_change(MSFT_Close, 1))), 5)",
+      "hypothesis": "MSFT_return_1d gives the direction of the peer move, while this measures how much MSFT and NVDA disagree over 5 days. High disagreement may mean the direction of MSFT's signal is less reliable, so the two together describe when the peer signal should be trusted."
+    }
+  ]
+}

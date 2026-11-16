@@ -1,0 +1,85 @@
+{
+  "reflection": "The notebook shows the 3-day Apple-vs-peer gap family helps in 2022, 2023 and 2025 but fails in 2024, the trending low-vol year. Most one-day Apple candle patterns and QQQ-only state factors flip sign in 2024. Scaled variants that stay close to the parent (volume weighting, vol scaling) are near-copies, so I need to change the information, not just the scaling. This round I try to fix 2024 by conditioning on persistence of the trend (peer gap sign agreeing with the 20d trend), a longer-window peer gap using MSFT only, and new overnight and volume-based ideas that stay within the nesting limit of 6.",
+  "lessons": [
+    {
+      "name": "aapl_peer_gap_trend_filtered",
+      "lesson": "Multiplying the peer gap by the sign of the QQQ 20d trend threw away magnitude information and flipped the effect by year, so it helped only in 2023."
+    },
+    {
+      "name": "aapl_peer_gap_10d_vol_ratio",
+      "lesson": "A 10-day peer gap is too slow and scaling by Apple's own vol ratio added noise, so it helped only in 2025."
+    },
+    {
+      "name": "peer_overnight_gap_mean",
+      "lesson": "The formula was nested deeper than 6, so overnight gap ideas must be written with fewer layers."
+    },
+    {
+      "name": "aapl_intraday_vs_qqq_intraday",
+      "lesson": "Intraday Apple-vs-QQQ return is largely a copy of AAPL_minus_QQQ_1d and only helped LR, adding nothing for the team."
+    },
+    {
+      "name": "aapl_volume_weighted_peer_gap",
+      "lesson": "The volume ratio multiplier barely changed the peer gap (0.98 similarity), so it was a near-copy that inherited the 2024 failure."
+    },
+    {
+      "name": "nvda_msft_spread_qqq_vol_state",
+      "lesson": "Scaling the NVDA-MSFT spread by a QQQ vol ratio left it nearly unchanged (0.99), so it was a duplicate."
+    }
+  ],
+  "factors": [
+    {
+      "name": "aapl_peer_gap_5d_regime_interaction",
+      "mode": "improve",
+      "parent": "aapl_peer_gap_regime_interaction",
+      "role": "relative_move",
+      "formula": "multiply(subtract(pct_change(AAPL_Close, 2), multiply(add(pct_change(MSFT_Close, 2), pct_change(NVDA_Close, 2)), 0.5)), safe_divide(rolling_std(pct_change(QQQ_Close, 1), 3), rolling_std(pct_change(QQQ_Close, 1), 60)))",
+      "hypothesis": "The parent failed in 2024 when vol was low and stable; using a 2-day gap and a 3/60 vol ratio makes the regime scale more extreme in calm periods and shrinks the signal there, which should reduce the 2024 damage."
+    },
+    {
+      "name": "aapl_msft_gap_trend_agree",
+      "mode": "improve",
+      "parent": "aapl_rel_peer_volume_gap",
+      "role": "relative_move",
+      "formula": "multiply(subtract(pct_change(AAPL_Close, 3), pct_change(MSFT_Close, 3)), subtract(pct_change(AAPL_Close, 20), pct_change(MSFT_Close, 20)))",
+      "hypothesis": "The peer gap failed in 2024 where relative moves persisted; multiplying the short gap by the 20d relative trend vs MSFT encodes whether the short gap continues or reverses the longer relative trend, and uses only the most similar peer."
+    },
+    {
+      "name": "aapl_overnight_vs_qqq_overnight",
+      "mode": "new",
+      "parent": "",
+      "role": "relative_move",
+      "formula": "subtract(subtract(safe_divide(AAPL_Open, lag(AAPL_Close, 1)), 1), subtract(safe_divide(QQQ_Open, lag(QQQ_Close, 1)), 1))",
+      "hypothesis": "Apple's overnight gap relative to the QQQ gap removes the market-wide component that made the raw gap regime dependent, leaving Apple-specific overnight sentiment."
+    },
+    {
+      "name": "aapl_down_volume_pressure",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "safe_divide(rolling_sum(multiply(pct_change(AAPL_Close, 1), AAPL_Volume), 5), rolling_sum(AAPL_Volume, 5))",
+      "hypothesis": "A 5-day volume-weighted return captures whether volume accompanied up or down moves, a smoother pattern than the single-day signed volume which failed as a copy of the return."
+    },
+    {
+      "name": "qqq_range_vs_aapl_range_gap",
+      "mode": "partner",
+      "parent": "nvda_qqq_volume_ratio_change",
+      "role": "relative_move",
+      "formula": "subtract(safe_divide(subtract(AAPL_High, AAPL_Low), rolling_mean(subtract(AAPL_High, AAPL_Low), 20)), safe_divide(subtract(QQQ_High, QQQ_Low), rolling_mean(subtract(QQQ_High, QQQ_Low), 20)))",
+      "hypothesis": "Complements the volume-activity market factor with Apple's range expansion relative to QQQ's range expansion, flagging Apple-specific stress days that interact with NVDA/QQQ activity."
+    },
+    {
+      "name": "nvda_msft_spread_apple_gap_product",
+      "mode": "partner",
+      "parent": "nvda_msft_lead_5d_spread",
+      "role": "peer_lead",
+      "formula": "multiply(subtract(pct_change(NVDA_Close, 3), pct_change(MSFT_Close, 3)), sign(subtract(pct_change(AAPL_Close, 3), pct_change(QQQ_Close, 3))))",
+      "hypothesis": "The NVDA-MSFT spread worked mainly in 2025 AI-leadership regimes; signing it by whether Apple is lagging or leading QQQ tells the model whether Apple is likely to catch up to the leadership move."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 18134,
+    "output_tokens": 2106
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

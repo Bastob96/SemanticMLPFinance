@@ -1,0 +1,54 @@
+{
+  "reflection": "replay of abl_claude_haiku, round 2",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "msft_return_1d_sign",
+      "mode": "improve",
+      "parent": "MSFT_return_1d",
+      "role": "peer_lead",
+      "formula": "sign(pct_change(MSFT_Close, 1))",
+      "hypothesis": "MSFT_return_1d is driven by a few large moves that differ across years (it failed in 2024 when the magnitudes were extreme); using only the direction of MSFT's last-day move should keep its useful lead signal while removing outlier sensitivity."
+    },
+    {
+      "name": "aapl_vol10_relative_qqq",
+      "mode": "improve",
+      "parent": "AAPL_volatility_10d",
+      "role": "relative_move",
+      "formula": "safe_divide(rolling_std(pct_change(AAPL_Close, 1), 10), rolling_std(pct_change(QQQ_Close, 1), 10))",
+      "hypothesis": "Apple's 10-day volatility alone reflects both market-wide and idiosyncratic regimes; dividing by QQQ's 10-day volatility isolates Apple-specific risk, which should hold up in years when the whole tech market is volatile (such as 2022 and 2025)."
+    },
+    {
+      "name": "aapl_overnight_gap_1d",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "safe_divide(subtract(AAPL_Open, lag(AAPL_Close, 1)), lag(AAPL_Close, 1))",
+      "hypothesis": "The overnight gap (open relative to the previous close) captures after-hours news flow that is not in the close-to-close returns already in the set, so it may carry partly independent next-day information."
+    },
+    {
+      "name": "qqq_close_to_ma20",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "subtract(safe_divide(QQQ_Close, rolling_mean(QQQ_Close, 20)), 1)",
+      "hypothesis": "The position of QQQ relative to its 20-day average describes the market trend regime; the existing factors only cover Apple's own trend, so this adds a market-wide trend state that may help in trending years like 2023 and 2024."
+    },
+    {
+      "name": "aapl_minus_nvda_mean_5d",
+      "mode": "partner",
+      "parent": "NVDA_cum_return_5d",
+      "role": "relative_move",
+      "formula": "rolling_mean(subtract(pct_change(AAPL_Close, 1), pct_change(NVDA_Close, 1)), 5)",
+      "hypothesis": "NVDA_cum_return_5d is a peer-lead signal that is strong in some years; averaging Apple's daily gap to NVDA over five days measures whether Apple is lagging or leading the AI-driven peer, which should complement NVDA's momentum rather than repeat it."
+    },
+    {
+      "name": "qqq_return_z_10d",
+      "mode": "partner",
+      "parent": "AAPL_volatility_10d",
+      "role": "peer_lead",
+      "formula": "safe_divide(pct_change(QQQ_Close, 1), rolling_std(pct_change(QQQ_Close, 1), 10))",
+      "hypothesis": "AAPL_volatility_10d describes Apple's own risk state; a volatility-scaled QQQ return shows whether the market's latest move is unusually large relative to its recent noise, which is a peer lead that should work jointly with Apple's volatility regime."
+    }
+  ]
+}

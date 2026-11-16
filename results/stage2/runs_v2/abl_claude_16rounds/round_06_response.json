@@ -1,0 +1,85 @@
+{
+  "reflection": "Volume-surge factors help in 2023 and 2025 but fail in 2022 and 2024, for both models; nothing has passed the team bar. Return-based relative moves flip sign across regimes. I will try making volume signals less regime dependent (rank-like via multi-window, differences between short and long baselines) and new ideas around price-volume interaction, QQQ-relative gap/trend, and MSFT/NVDA divergence from QQQ. Also test ranges with longer normalization to be robust in 2022 vs 2024.",
+  "lessons": [
+    {
+      "name": "aapl_volume_vs_peer_volume_5d_smooth",
+      "lesson": "Smoothing volume over 3 days removed the one-day attention spike that carried the signal, so the gain vanished."
+    },
+    {
+      "name": "aapl_vs_qqq_volume_surge",
+      "lesson": "Apple volume surge relative to QQQ helped both models in 2023 and 2025 but failed in 2022 and 2024, similar to the NVDA version so it is regime dependent."
+    },
+    {
+      "name": "qqq_volume_change_signed_by_trend",
+      "lesson": "Short-vs-long QQQ volume zscore difference was a slow market-level measure with no predictive information for Apple in any year."
+    },
+    {
+      "name": "aapl_high_vs_prev_close_gap",
+      "lesson": "Upside-minus-downside excursion from prior close is almost the same as the daily return (0.89 similarity) and added noise, hurting 2024."
+    },
+    {
+      "name": "aapl_volume_surge_vol_state",
+      "lesson": "QQQ short/long volatility ratio is a rescaled vol factor that only helped in 2025 and was noise elsewhere."
+    },
+    {
+      "name": "aapl_minus_qqq_with_volume_confirm",
+      "lesson": "Multiplying relative return by NVDA volume z-score created a noisy interaction dominated by volume outliers that hurt in 2025."
+    }
+  ],
+  "factors": [
+    {
+      "name": "aapl_vs_qqq_volume_surge_5d",
+      "mode": "improve",
+      "parent": "aapl_vs_qqq_volume_surge",
+      "role": "relative_move",
+      "formula": "subtract(zscore(rolling_mean(AAPL_Volume, 5), 60), zscore(rolling_mean(QQQ_Volume, 5), 60))",
+      "hypothesis": "The 20d baseline made the signal flip in 2022 and 2024; a 5d average against a 60d baseline captures persistent attention differences and should be steadier across regimes."
+    },
+    {
+      "name": "aapl_volume_vs_msft_nvda_volume",
+      "mode": "improve",
+      "parent": "aapl_volume_vs_peer_volume",
+      "role": "apple_own",
+      "formula": "subtract(zscore(AAPL_Volume, 20), multiply(add(zscore(NVDA_Volume, 20), zscore(MSFT_Volume, 20)), 0.5))",
+      "hypothesis": "Comparing Apple's volume surge with the average of both peers reduces idiosyncratic NVDA noise that hurt 2024 while keeping the 2023/2025 gain."
+    },
+    {
+      "name": "aapl_volume_price_range_pressure",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "multiply(zscore(AAPL_Volume, 20), safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close))",
+      "hypothesis": "High volume combined with wide range signals capitulation or climactic moves that tend to revert next day, a nonlinear interaction the existing factors lack."
+    },
+    {
+      "name": "msft_nvda_minus_qqq_5d",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "subtract(multiply(add(pct_change(MSFT_Close, 5), pct_change(NVDA_Close, 5)), 0.5), pct_change(QQQ_Close, 5))",
+      "hypothesis": "Whether big tech leaders outperform the index shows breadth/leadership in the tech sector, which may influence Apple's next day follow-through."
+    },
+    {
+      "name": "qqq_return_vs_aapl_vol_state",
+      "mode": "partner",
+      "parent": "aapl_volume_vs_peer_volume",
+      "role": "market_condition",
+      "formula": "safe_divide(pct_change(QQQ_Close, 1), rolling_std(pct_change(QQQ_Close, 1), 20))",
+      "hypothesis": "A volatility-normalized QQQ move describes the market state; combined with Apple's relative volume it should tell whether the attention surge is market driven or Apple specific."
+    },
+    {
+      "name": "aapl_minus_qqq_gap_3d_mean",
+      "mode": "partner",
+      "parent": "aapl_vs_qqq_volume_surge",
+      "role": "relative_move",
+      "formula": "rolling_mean(subtract(pct_change(AAPL_Close, 1), pct_change(QQQ_Close, 1)), 10)",
+      "hypothesis": "Persistent 10-day Apple relative strength vs QQQ combined with a relative volume surge indicates whether Apple attention is accompanied by sustained leadership or lag."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 15994,
+    "output_tokens": 1758
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

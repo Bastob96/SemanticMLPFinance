@@ -1,0 +1,85 @@
+{
+  "reflection": "Nothing has reached the team. Most factors help in 2023 and 2025 and hurt in 2022 and 2024, so the sign of the effect flips between regimes. Volume surges of NVDA and MSFT are the only ones with some stability, and they help both models. The pair of the two only added their individual gains. I will try combining the volume signals (an average across peers, and relative to Apple's own volume), smoothing over more days, and a few new ideas: Apple vs. peer volatility, the QQQ 1-day move relative to its own volatility, and a multi-day lagged return.",
+  "lessons": [
+    {
+      "name": "msft_volume_surge_signed",
+      "lesson": "Multiplying by the return sign destroyed the attention information in the volume surge and mixed it with the return already in MSFT_return_1d, so it only helped in 2025."
+    },
+    {
+      "name": "aapl_minus_qqq_5d_volscaled",
+      "lesson": "Dividing by Apple's own 20d vol made it a noisy rescaled copy of 5d momentum with a regime-dependent sign, hurting in 2022 and 2024."
+    },
+    {
+      "name": "nvda_volume_surge",
+      "lesson": "Unusual NVDA volume is a new attention proxy that gave big gains in 2023 but lost in 2022 and 2024, so it is unstable and probably regime dependent."
+    },
+    {
+      "name": "qqq_range_vs_aapl_range",
+      "lesson": "Relative range captured Apple-specific turbulence versus the market and helped three years, but 2022's market-wide high-vol regime made it a drag."
+    },
+    {
+      "name": "aapl_volume_surge_signed",
+      "lesson": "Apple's own signed volume surge duplicates the information in the daily return and gave gains only in the calmer 2023 and 2025 regimes."
+    },
+    {
+      "name": "aapl_close_position_vs_qqq_position",
+      "lesson": "The difference of two bounded intraday positions is noisy and flipped sign between 2022-23 and 2024-25, so it was no better than the single position."
+    }
+  ],
+  "factors": [
+    {
+      "name": "peer_volume_surge_mean",
+      "mode": "improve",
+      "parent": "nvda_volume_surge",
+      "role": "market_condition",
+      "formula": "add(zscore(NVDA_Volume, 20), zscore(MSFT_Volume, 20))",
+      "hypothesis": "NVDA and MSFT volume surges each flip in different years; averaging them cuts idiosyncratic noise and uses the pair's +0.014 in a single, less noisy factor."
+    },
+    {
+      "name": "nvda_volume_surge_60d",
+      "mode": "improve",
+      "parent": "nvda_volume_surge",
+      "role": "market_condition",
+      "formula": "zscore(NVDA_Volume, 60)",
+      "hypothesis": "A 20d baseline adapts too quickly to the NVDA volume regime, which probably caused the 2022 and 2024 failures; a 60d baseline gives a steadier measure of unusual attention."
+    },
+    {
+      "name": "aapl_vs_peer_vol_ratio",
+      "mode": "new",
+      "parent": "",
+      "role": "relative_move",
+      "formula": "safe_divide(rolling_std(pct_change(AAPL_Close, 1), 10), rolling_std(pct_change(QQQ_Close, 1), 10))",
+      "hypothesis": "Apple's idiosyncratic volatility relative to the market signals stress specific to Apple, which may predict mean reversion in a way that is stable across regimes."
+    },
+    {
+      "name": "qqq_return_zscore_10d",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "zscore(pct_change(QQQ_Close, 1), 10)",
+      "hypothesis": "A QQQ move scaled by its recent volatility separates real shocks from normal noise across regimes, unlike the raw 1d return, which depends on vol level."
+    },
+    {
+      "name": "aapl_volume_vs_peer_volume",
+      "mode": "partner",
+      "parent": "nvda_volume_surge",
+      "role": "apple_own",
+      "formula": "subtract(zscore(AAPL_Volume, 20), zscore(NVDA_Volume, 20))",
+      "hypothesis": "When NVDA's volume surges without Apple's, the attention is elsewhere; this contrasts Apple's volume with NVDA's and complements the market-attention reading."
+    },
+    {
+      "name": "aapl_minus_msft_cum_3d",
+      "mode": "partner",
+      "parent": "msft_volume_surge",
+      "role": "relative_move",
+      "formula": "subtract(pct_change(AAPL_Close, 3), pct_change(MSFT_Close, 3))",
+      "hypothesis": "Apple's short-term performance relative to MSFT, the most similar mega-cap, gives a direction to pair with MSFT's unusual volume without overlapping 5d momentum."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 11953,
+    "output_tokens": 1631
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

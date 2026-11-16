@@ -1,0 +1,85 @@
+{
+  "reflection": "Round 1: nothing passed; every factor helped in 2023 and 2025 but hurt in 2024, suggesting regime-dependent features that overfit in calm trending years. Ratio/dispersion features were weak; the gap factor helped LR in some years. Existing top factors are volatility and MSFT return, so I will try smoother, bounded transformations (ranks via position in rolling range, signed gaps) and mean-reversion vs. peers. I will also test volume-related and multi-day relative moves, which are less regime-sensitive.",
+  "lessons": [
+    {
+      "name": "aapl_vol_ratio_5_20",
+      "lesson": "Ratio of short to long vol is nearly a rescaled copy of AAPL_volatility_5d and its level information is lost, so it was noise in 2022 and 2024."
+    },
+    {
+      "name": "msft_return_zscore_20d",
+      "lesson": "Standardizing MSFT's return mostly duplicates MSFT_return_1d, helping RF slightly but being unstable in 2024 when MSFT vol was low."
+    },
+    {
+      "name": "aapl_close_position_in_range",
+      "lesson": "Intraday close location carries a weak mean-reversion/momentum signal that flips sign across regimes, so it helped only in 2023 and 2025."
+    },
+    {
+      "name": "qqq_vol_ratio_5_20",
+      "lesson": "Market vol-change ratio is new information but has no stable link to Apple's next-day direction."
+    },
+    {
+      "name": "aapl_overnight_gap",
+      "lesson": "Overnight gap relative to QQQ helped LR in 2023 but the sign of its effect (fade vs follow) changed in 2024, hurting badly."
+    },
+    {
+      "name": "peer_dispersion_5d",
+      "lesson": "Absolute dispersion is unsigned and dominated by NVDA spikes, so it gave no direction and hurt in 2024."
+    }
+  ],
+  "factors": [
+    {
+      "name": "aapl_gap_sign_vs_prev_close",
+      "mode": "improve",
+      "parent": "aapl_overnight_gap",
+      "role": "relative_move",
+      "formula": "sign(subtract(safe_divide(AAPL_Open, lag(AAPL_Close, 1)), safe_divide(QQQ_Open, lag(QQQ_Close, 1))))",
+      "hypothesis": "The raw gap had outliers that made LR unstable in 2024; taking only the sign keeps the direction while removing the size outliers."
+    },
+    {
+      "name": "aapl_close_position_zscore_5d",
+      "mode": "improve",
+      "parent": "aapl_close_position_in_range",
+      "role": "apple_own",
+      "formula": "zscore(safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low)), 5)",
+      "hypothesis": "Single-day close location is noisy; comparing it to its own 5-day average isolates unusual closes and should reduce regime flipping."
+    },
+    {
+      "name": "aapl_close_vs_20d_high",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "subtract(safe_divide(AAPL_Close, rolling_max(AAPL_Close, 20)), 1)",
+      "hypothesis": "Drawdown from the 20-day high captures pullback and mean-reversion state, differing from the MA distance already present."
+    },
+    {
+      "name": "qqq_close_to_ma20",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "subtract(safe_divide(QQQ_Close, rolling_mean(QQQ_Close, 20)), 1)",
+      "hypothesis": "Market trend state gives context for whether Apple's drift persists; Apple-only trend measures already exist but the market's does not."
+    },
+    {
+      "name": "aapl_minus_qqq_cum_5d",
+      "mode": "partner",
+      "parent": "aapl_close_position_in_range",
+      "role": "relative_move",
+      "formula": "subtract(pct_change(AAPL_Close, 5), pct_change(QQQ_Close, 5))",
+      "hypothesis": "Multi-day relative strength combined with intraday close location could separate real Apple weakness from market-driven moves, mean reverting when Apple has lagged."
+    },
+    {
+      "name": "msft_volume_surge",
+      "mode": "partner",
+      "parent": "aapl_close_position_in_range",
+      "role": "peer_lead",
+      "formula": "zscore(MSFT_Volume, 20)",
+      "hypothesis": "Peer volume surges flag information days; together with Apple's close location it may indicate whether the day's close is conviction or noise."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 6072,
+    "output_tokens": 1547
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

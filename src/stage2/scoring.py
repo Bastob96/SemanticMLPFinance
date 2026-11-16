@@ -29,12 +29,17 @@ TARGET = "target_next_day_up"
 BASE = FEATURE_SETS["C"]
 YEARS = (2022, 2023, 2024, 2025)
 LR_SEED, RF_SEEDS = 42, (0, 1, 2)
+# Inputs the forest considers at each split. Stage 1's default ("sqrt") gives 4 for 22-24 factors but 5 from
+# 25 factors on, so adding a 3rd team factor (or a pair on top of a 1-factor team) would change the forest
+# itself, and even random numbers then looked useful (20 Oct check). Fixed at 4, the same as Stage 1 uses
+# for the 22 factors, so the 22-factor models and every single-factor test are unchanged.
+RF_MAX_FEATURES = 4
 
 
 def _models(x, y):
     yield "logistic_regression", fit_logistic_regression(x, y, LR_SEED)
     for seed in RF_SEEDS:
-        yield f"random_forest_{seed}", fit_random_forest(x, y, seed)
+        yield f"random_forest_{seed}", fit_random_forest(x, y, seed, max_features=RF_MAX_FEATURES)
 
 
 def _fit_score(train, val, columns, importance_of=None, repeats=20):
@@ -57,45 +62,77 @@ def _fit_score(train, val, columns, importance_of=None, repeats=20):
     return pd.DataFrame(rows)
 
 
+def _check_split(data, year, check):
+    """Training and checking days for one check.
+    'q3': train on Q1-Q2, check on Q3 (the Stage 1 validation quarter).
+    'q2': train on Q1, check on Q2 (an extra, earlier check; Q1 days whose next day is in Q2 are dropped)."""
+    s = quarterly_split(data, year)
+    if check == "q3":
+        return s["train"], s["validation"]
+    train = s["train"]
+    q1 = train[(train["Date"].dt.quarter == 1) & (pd.to_datetime(train["target_date"]).dt.quarter == 1)]
+    return q1.reset_index(drop=True), train[train["Date"].dt.quarter == 2].reset_index(drop=True)
+
+
 @dataclass
 class Scorer:
-    """Caches the base-model scores so each new candidate costs one refit per year."""
+    """Caches the base-model scores so each new candidate costs one refit per year and check."""
     features: pd.DataFrame          # Stage 1 feature table (build_stage1_features output)
     years: tuple = YEARS
+    checks: tuple = ("q3",)         # ("q2", "q3") = 8 checks instead of 4 (longer measuring stick, 21 Oct)
 
     def __post_init__(self):
         self.features = self.features.copy()
         self.features["Date"] = pd.to_datetime(self.features["Date"])
-        self._base = {}
-        for year in self.years:
-            s = quarterly_split(self.features, year)
-            self._base[year] = _fit_score(s["train"], s["validation"], BASE).set_index("model")
+        self._base = {}          # (year, check, team names) -> scores of the models without the new factor(s)
 
     def score(self, name: str, values: pd.Series) -> pd.DataFrame:
-        """values: factor indexed by Date. Returns one row per year."""
-        values = pd.Series(values, name=name)
-        values.index = pd.to_datetime(values.index)
-        data = self.features.merge(values.rename(name), left_on="Date", right_index=True, how="left")
+        """values: factor indexed by Date. Returns one row per year (gain over the 22 factors)."""
+        return self.gains({name: values}, team={}, importance_of=name)
+
+    def gains(self, add: dict, team: dict, importance_of=None) -> pd.DataFrame:
+        """Gain from adding the factor(s) in `add` on top of the 22 factors plus `team`.
+
+        add, team: {name: values indexed by Date}. With an empty team this is the solo test;
+        with the selected team it is the team trial; with two factors in `add` it is a pair trial.
+        Returns one row per year: auc_gain (mean of LR and the 3 RF seeds), auc_gain_lr,
+        auc_gain_rf, bal_acc_gain and, if requested, the permutation importance of one factor.
+        """
+        add_names, team_names = list(add), sorted(team)
+        label = "+".join(add_names)
+        data = self.features
+        for name, values in {**team, **add}.items():
+            values = pd.Series(values, name=name)
+            values.index = pd.to_datetime(values.index)
+            data = data.merge(values.rename(name), left_on="Date", right_index=True, how="left")
+        extra = team_names + add_names
         rows = []
         for year in self.years:
-            s = quarterly_split(data, year)
-            train, val = s["train"], s["validation"]
-            if train[name].isna().any() or val[name].isna().any() or not np.isfinite(train[name]).all() \
-                    or train[name].nunique() < 3:
-                rows.append({"factor": name, "year": year, "valid": False})
-                continue
-            # tame extreme values using the training quarters' 1st/99th percentiles (no peeking at validation)
-            lo, hi = train[name].quantile([0.01, 0.99])
-            train, val = train.copy(), val.copy()
-            train[name], val[name] = train[name].clip(lo, hi), val[name].clip(lo, hi)
-            cand = _fit_score(train, val, BASE + [name], importance_of=name).set_index("model")
-            gain = cand[["auc", "bal_acc"]] - self._base[year][["auc", "bal_acc"]]
-            rows.append({"factor": name, "year": year, "valid": True,
-                         "auc_gain": gain["auc"].mean(),
-                         "auc_gain_lr": gain.loc["logistic_regression", "auc"],
-                         "auc_gain_rf": gain.drop("logistic_regression")["auc"].mean(),
-                         "bal_acc_gain": gain["bal_acc"].mean(),
-                         "importance": cand["importance"].mean()})
+            for check in self.checks:
+                train, val = _check_split(data, year, check)
+                bad = [c for c in extra if train[c].isna().any() or val[c].isna().any()
+                       or not np.isfinite(train[c]).all() or train[c].nunique() < 3]
+                if bad:
+                    rows.append({"factor": label, "year": year, "check": check, "valid": False})
+                    continue
+                # tame extreme values using the training quarters' 1st/99th percentiles (no peeking at validation)
+                train, val = train.copy(), val.copy()
+                for c in extra:
+                    lo, hi = train[c].quantile([0.01, 0.99])
+                    train[c], val[c] = train[c].clip(lo, hi), val[c].clip(lo, hi)
+                key = (year, check, tuple(team_names))
+                if key not in self._base:
+                    self._base[key] = _fit_score(train, val, BASE + team_names).set_index("model")
+                base = self._base[key]
+                cand = _fit_score(train, val, BASE + team_names + add_names, importance_of=importance_of).set_index("model")
+                gain = cand[["auc", "bal_acc"]] - base[["auc", "bal_acc"]]
+                row = {"factor": label, "year": year, "check": check, "valid": True,
+                       "auc_gain": gain["auc"].mean(),
+                       "auc_gain_lr": gain.loc["logistic_regression", "auc"],
+                       "auc_gain_rf": gain.drop("logistic_regression")["auc"].mean(),
+                       "bal_acc_gain": gain["bal_acc"].mean()}
+                row["importance"] = cand["importance"].mean() if importance_of is not None else float("nan")
+                rows.append(row)
         return pd.DataFrame(rows)
 
 

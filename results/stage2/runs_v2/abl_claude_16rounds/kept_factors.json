@@ -1,0 +1,32 @@
+[
+  {
+    "name": "aapl_vs_nvda_volume_surge_range_scaled",
+    "formula": "safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(NVDA_Volume, 20)), add(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 0.005))",
+    "hypothesis": "Scaling by today's range rather than 20d return vol makes the volume contrast adjust to the current day's turbulence, which may cut the 2022 and 2024 losses.",
+    "round": 11,
+    "how_selected": "team trial, round 11",
+    "auc_gain": 0.013125258337854252,
+    "years_helped": 3,
+    "team_gain": 0.013125258337854252
+  },
+  {
+    "name": "qqq_volume_move_divergence_vol_regime_gated",
+    "formula": "safe_divide(subtract(zscore(QQQ_Volume, 20), zscore(abs(pct_change(QQQ_Close, 1)), 20)), add(rolling_std(pct_change(QQQ_Close, 1), 20), 0.004))",
+    "hypothesis": "The parent lost in 2024, probably because the calm low-vol regime made the range denominator tiny and noisy; scaling by QQQ's 20d return volatility ties it to the regime level and should stabilise 2024.",
+    "round": 15,
+    "how_selected": "team trial, round 15",
+    "auc_gain": 0.01849863957440685,
+    "years_helped": 2,
+    "team_gain": 0.02194656765868402
+  },
+  {
+    "name": "aapl_vs_qqq_volume_surge_vs_vol_ratio",
+    "formula": "multiply(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), safe_divide(rolling_std(pct_change(AAPL_Close, 1), 5), add(rolling_std(pct_change(AAPL_Close, 1), 60), 0.002)))",
+    "hypothesis": "The volume contrast fails in 2022 and 2024 when volume spikes carry no information; weighting it by short-vs-long Apple volatility keeps it only when Apple is actually turbulent.",
+    "round": 15,
+    "how_selected": "team trial, round 15",
+    "auc_gain": 0.016360149955898032,
+    "years_helped": 2,
+    "team_gain": 0.018314458523857505
+  }
+]

@@ -18,7 +18,9 @@ def fit_logistic_regression(x_train, y_train, seed: int = 42) -> Pipeline:
     return model.fit(x_train, y_train)
 
 
-def fit_random_forest(x_train, y_train, seed: int) -> RandomForestClassifier:
+def fit_random_forest(x_train, y_train, seed: int, max_features="sqrt") -> RandomForestClassifier:
+    # max_features: inputs considered at each split. Stage 1 uses the default ("sqrt", i.e. 4 of the 22 factors).
+    # Stage 2 fixes it at 4 so that adding factors does not change the forest itself (see src/stage2/scoring.py).
     model = RandomForestClassifier(
         n_estimators=300,
         max_depth=5,
@@ -26,5 +28,6 @@ def fit_random_forest(x_train, y_train, seed: int) -> RandomForestClassifier:
         class_weight="balanced",
         random_state=seed,
         n_jobs=-1,
+        max_features=max_features,
     )
     return model.fit(x_train, y_train)

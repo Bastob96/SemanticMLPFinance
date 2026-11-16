@@ -1,0 +1,54 @@
+{
+  "reflection": "replay of abl_claude_nofeedback, round 6",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "aapl_vol5_to_vol20_log",
+      "mode": "improve",
+      "parent": "aapl_vol10_to_vol20_log",
+      "role": "apple_own",
+      "formula": "log(safe_divide(rolling_std(pct_change(AAPL_Close, 1), 5), rolling_std(pct_change(AAPL_Close, 1), 60)))",
+      "hypothesis": "The 10d/20d ratio overlaps heavily with existing vol factors. Using a 5d window against a 60d baseline captures short-term vol spikes that tend to mean-revert, with less redundancy."
+    },
+    {
+      "name": "msft_return_zscore_60d_clipped",
+      "mode": "improve",
+      "parent": "msft_return_zscore_20d",
+      "role": "peer_lead",
+      "formula": "zscore(pct_change(MSFT_Close, 1), 60)",
+      "hypothesis": "MSFT_return_1d is useful, but the 20d z-score is noisy. A 60d window gives a steadier standardized MSFT shock that is comparable across volatility regimes."
+    },
+    {
+      "name": "qqq_range_vs_aapl_range",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "subtract(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close))",
+      "hypothesis": "The gap between market range and Apple range shows whether Apple's volatility is idiosyncratic. Idiosyncratic spikes may revert differently from market-wide ones."
+    },
+    {
+      "name": "aapl_volume_change_x_return_5d",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "multiply(pct_change(AAPL_Close, 5), diff(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20)), 1))",
+      "hypothesis": "A 5-day move accompanied by a rising volume ratio signals conviction or exhaustion. This is a nonlinear interaction the tree model can use."
+    },
+    {
+      "name": "nvda_msft_mean_return_3d_minus_aapl",
+      "mode": "partner",
+      "parent": "aapl_vol5_to_vol20_log",
+      "role": "relative_move",
+      "formula": "subtract(multiply(add(rolling_mean(pct_change(MSFT_Close, 1), 3), rolling_mean(pct_change(NVDA_Close, 1), 3)), 0.5), rolling_mean(pct_change(AAPL_Close, 1), 10))",
+      "hypothesis": "Pairs with the vol-regime factor. Whether Apple lags recent peer strength matters more when vol is elevated, because catch-up or reversal is stronger."
+    },
+    {
+      "name": "qqq_close_to_ma60_trend",
+      "mode": "partner",
+      "parent": "msft_return_zscore_60d_clipped",
+      "role": "market_condition",
+      "formula": "subtract(safe_divide(QQQ_Close, rolling_mean(QQQ_Close, 60)), 1)",
+      "hypothesis": "Gives the medium-term market trend regime. It conditions how a MSFT shock carries over to Apple, which may differ between bull and bear regimes."
+    }
+  ]
+}

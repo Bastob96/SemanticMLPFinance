@@ -1,0 +1,11 @@
+[
+  {
+    "name": "qqq_range_vs_aapl_range",
+    "formula": "subtract(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close))",
+    "hypothesis": "When Apple's intraday range is wide relative to the market's, Apple-specific noise is high and tends to mean-revert next day.",
+    "round": "20261015_1635_claude",
+    "how_selected": "forward selection step 1: gain on the team +0.010, helped 7/8 checks",
+    "auc_gain": 0.0095128018260015,
+    "years_helped": 7
+  }
+]

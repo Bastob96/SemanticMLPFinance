@@ -1,0 +1,85 @@
+{
+  "reflection": "Volume-contrast factors (AAPL vs QQQ/NVDA) repeatedly help in 2023 and 2025 (both models) but fail in 2022 and 2024, with pair gains about +0.02 that are never more than the sum of the parts. Price-pattern factors mostly fail with the same sign-flip across regimes. The 2022/2024 failures may come from trending volume levels (2022 high-vol bear, 2024 low-vol bull), so I will try making volume contrasts robust to regime by rank-like normalization over 60d and by combining with volatility state. I will also try different ideas: volume-change-based dollar volume, up/down volume asymmetry, and the QQQ-relative intraday range.",
+  "lessons": [
+    {
+      "name": "aapl_vs_qqq_volume_60d_both",
+      "lesson": "Using 60d baselines on both volumes kept the 2023/2025 gains and 2022/2024 losses, helping RF only, so slower windows did not fix regime dependence."
+    },
+    {
+      "name": "aapl_vs_nvda_volume_surge_vol_scaled",
+      "lesson": "Dividing the volume contrast by Apple's own volatility reduced the 2022 and 2024 losses and helped both models, making it the most stable volume variant yet."
+    },
+    {
+      "name": "aapl_close_vs_prior_5d_low_range",
+      "lesson": "Stochastic-style position in a 10d range was nearly a copy of distance to the 20d mean and failed in 2022 and 2024."
+    },
+    {
+      "name": "qqq_down_day_count_10d",
+      "lesson": "Share of up/down days in QQQ duplicates existing momentum measures and only helped LR in calm years."
+    },
+    {
+      "name": "aapl_lag_return_2d_vs_msft",
+      "lesson": "The lagged AAPL-vs-MSFT return gap carried no next-day information and hurt both models."
+    },
+    {
+      "name": "qqq_volume_trend_vs_aapl_range",
+      "lesson": "Mixing QQQ volume with AAPL range was noisy and helped neither model, only adding pair value alongside the volume contrast."
+    }
+  ],
+  "factors": [
+    {
+      "name": "aapl_vs_qqq_volume_60d_vol_scaled",
+      "mode": "improve",
+      "parent": "aapl_vs_nvda_volume_surge_vol_scaled",
+      "role": "relative_move",
+      "formula": "safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), add(rolling_std(pct_change(AAPL_Close, 1), 20), 0.005))",
+      "hypothesis": "The volatility scaling reduced 2022/2024 losses for the NVDA contrast; applying it to the better QQQ 60d-baseline contrast should combine the best baseline with regime normalization."
+    },
+    {
+      "name": "aapl_vs_nvda_volume_surge_qqq_vol_scaled",
+      "mode": "improve",
+      "parent": "aapl_vs_nvda_volume_surge_vol_scaled",
+      "role": "apple_own",
+      "formula": "safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(NVDA_Volume, 20)), add(rolling_std(pct_change(QQQ_Close, 1), 20), 0.004))",
+      "hypothesis": "Scaling by market volatility rather than Apple's own may better neutralize the 2022 high-vol and 2024 low-vol regime difference that broke the unscaled contrast."
+    },
+    {
+      "name": "aapl_updown_volume_asymmetry_10d",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "safe_divide(rolling_sum(multiply(AAPL_Volume, sign(pct_change(AAPL_Close, 1))), 10), rolling_sum(AAPL_Volume, 10))",
+      "hypothesis": "Net signed volume share over 10 days measures accumulation versus distribution, a different thing from volume level surges, and may predict mean reversion or continuation."
+    },
+    {
+      "name": "qqq_volume_vs_price_divergence",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "subtract(zscore(QQQ_Volume, 20), zscore(abs(pct_change(QQQ_Close, 1)), 20))",
+      "hypothesis": "High QQQ volume on a small move indicates absorption/churn in the tech sector, a market state that may precede reversals in Apple."
+    },
+    {
+      "name": "aapl_range_vs_qqq_range_ratio_vol_gap",
+      "mode": "partner",
+      "parent": "aapl_vs_qqq_volume_surge_60d_base",
+      "role": "market_condition",
+      "formula": "subtract(zscore(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 20), zscore(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 20))",
+      "hypothesis": "Apple's range stress relative to QQQ's complements the volume contrast: volume surge with idiosyncratic range expansion differs from volume surge on calm days, which may explain 2022/2024 failures."
+    },
+    {
+      "name": "msft_nvda_volume_vs_aapl_volume_return",
+      "mode": "partner",
+      "parent": "aapl_volume_vs_peer_volume",
+      "role": "peer_lead",
+      "formula": "multiply(subtract(zscore(NVDA_Volume, 20), zscore(MSFT_Volume, 20)), sign(subtract(pct_change(NVDA_Close, 1), pct_change(MSFT_Close, 1))))",
+      "hypothesis": "NVDA-vs-MSFT volume attention signed by which peer is winning describes the tech leadership direction, complementing Apple's own volume contrast with a peer-lead view."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 19584,
+    "output_tokens": 1982
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

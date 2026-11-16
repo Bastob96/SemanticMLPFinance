@@ -1,0 +1,32 @@
+[
+  {
+    "name": "aapl_volume_surge_vs_nvda_log",
+    "formula": "subtract(log(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20))), log(safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 20))))",
+    "hypothesis": "The parent's gap is driven by extreme ratio spikes in either stock; taking logs of each ratio before subtracting makes the relative surge symmetric and less dominated by one-day outliers, which may fix the 2022 and 2024 misses.",
+    "round": 7,
+    "how_selected": "team trial, round 7",
+    "auc_gain": 0.014520046325513087,
+    "years_helped": 3,
+    "team_gain": 0.014520046325513087
+  },
+  {
+    "name": "nvda_volume_surge_log",
+    "formula": "log(safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 20)))",
+    "hypothesis": "The parent missed in 2022 and 2024 probably because a few extreme NVDA volume spikes dominate the linear scale; a log transform compresses those spikes so the signal reflects typical surges rather than outliers.",
+    "round": 7,
+    "how_selected": "pair trial with aapl_volume_surge_vs_60d_minus_qqq, round 7",
+    "auc_gain": 0.010149402316921512,
+    "years_helped": 2,
+    "team_gain": -0.002039335167532113
+  },
+  {
+    "name": "aapl_volume_surge_vs_60d_minus_qqq",
+    "formula": "subtract(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 60)), safe_divide(QQQ_Volume, rolling_mean(QQQ_Volume, 60)))",
+    "hypothesis": "The 20-day baseline is noisy and reacts to recent spikes, which may explain the 2022 and 2024 misses; a 60-day baseline measures Apple's relative volume against a steadier norm.",
+    "round": 5,
+    "how_selected": "pair trial with nvda_volume_surge_log, round 7",
+    "auc_gain": 0.005931777355210884,
+    "years_helped": 2,
+    "team_gain": 0.0007433152773626168
+  }
+]

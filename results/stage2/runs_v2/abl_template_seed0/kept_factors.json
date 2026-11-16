@@ -1,0 +1,32 @@
+[
+  {
+    "name": "template_665013",
+    "formula": "rolling_mean(multiply(sign(pct_change(AAPL_Close, 1)), zscore(AAPL_Volume, 5)), 2)",
+    "hypothesis": "template formula (no LLM)",
+    "round": 5,
+    "how_selected": "team trial, round 5",
+    "auc_gain": 0.011356532072644615,
+    "years_helped": 3,
+    "team_gain": 0.011356532072644615
+  },
+  {
+    "name": "template_410282",
+    "formula": "rolling_mean(multiply(sign(pct_change(QQQ_Close, 1)), zscore(QQQ_Volume, 20)), 5)",
+    "hypothesis": "template formula (no LLM)",
+    "round": 6,
+    "how_selected": "pair trial with template_34574, round 6",
+    "auc_gain": 0.005262786109173582,
+    "years_helped": 3,
+    "team_gain": 0.00021595430003357521
+  },
+  {
+    "name": "template_34574",
+    "formula": "subtract(safe_divide(MSFT_Close, rolling_max(MSFT_High, 3)), 1)",
+    "hypothesis": "template formula (no LLM)",
+    "round": 3,
+    "how_selected": "pair trial with template_410282, round 6",
+    "auc_gain": 0.01061650944962967,
+    "years_helped": 2,
+    "team_gain": 0.007611325162476049
+  }
+]

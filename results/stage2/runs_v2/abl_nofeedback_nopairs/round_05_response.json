@@ -1,0 +1,54 @@
+{
+  "reflection": "replay of abl_claude_nofeedback, round 5",
+  "lessons": [],
+  "factors": [
+    {
+      "name": "aapl_vol10_to_vol20_log",
+      "mode": "improve",
+      "parent": "aapl_vol10_to_vol60_ratio_log",
+      "role": "apple_own",
+      "formula": "log(safe_divide(rolling_std(pct_change(AAPL_Close, 1), 10), rolling_std(pct_change(AAPL_Close, 1), 20)))",
+      "hypothesis": "The 60d denominator likely spans regime changes and is too slow; a 20d baseline gives a cleaner short-term vol expansion/contraction signal that is less collinear with existing vol levels."
+    },
+    {
+      "name": "msft_ret_minus_qqq_ret_1d",
+      "mode": "improve",
+      "parent": "msft_return_vol_scaled_1d",
+      "role": "peer_lead",
+      "formula": "subtract(pct_change(MSFT_Close, 1), pct_change(QQQ_Close, 1))",
+      "hypothesis": "MSFT 1d return is useful but largely market beta; removing QQQ isolates MSFT idiosyncratic strength, which may carry lead/lag information for Apple."
+    },
+    {
+      "name": "aapl_two_day_reversal_vol_adj",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "safe_divide(pct_change(AAPL_Close, 2), rolling_std(pct_change(AAPL_Close, 1), 10))",
+      "hypothesis": "Short-term moves scaled by recent vol capture overreaction mean reversion across regimes with very different volatility."
+    },
+    {
+      "name": "qqq_close_to_ma20_vs_vol",
+      "mode": "new",
+      "parent": "",
+      "role": "market_condition",
+      "formula": "safe_divide(subtract(safe_divide(QQQ_Close, rolling_mean(QQQ_Close, 20)), 1), rolling_std(pct_change(QQQ_Close, 1), 20))",
+      "hypothesis": "Vol-normalized QQQ trend deviation describes the market state (stretched vs. neutral) comparable across years."
+    },
+    {
+      "name": "aapl_vol_price_divergence_vs_qqq_volume",
+      "mode": "partner",
+      "parent": "aapl_vol10_to_vol20_log",
+      "role": "market_condition",
+      "formula": "subtract(safe_divide(QQQ_Volume, rolling_mean(QQQ_Volume, 20)), safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20)))",
+      "hypothesis": "Pairs with Apple's own vol regime: when market volume is elevated relative to Apple's, the move is market-driven, changing how vol expansion predicts direction."
+    },
+    {
+      "name": "aapl_vs_peer_3d_relative_strength",
+      "mode": "partner",
+      "parent": "msft_ret_minus_qqq_ret_1d",
+      "role": "relative_move",
+      "formula": "subtract(rolling_mean(pct_change(AAPL_Close, 1), 3), multiply(add(rolling_mean(pct_change(MSFT_Close, 1), 3), rolling_mean(pct_change(NVDA_Close, 1), 3)), 0.5))",
+      "hypothesis": "Apple's 3d lag versus the peer average complements the 1d peer-lead signal: catch-up potential when peers led over a slightly longer window."
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "reflection": "The notebook shows a consistent pattern: nearly every volume-based factor helps in 2023 and 2025 and hurts in 2022 and 2024, so none reaches 3/4 years alone. Pairs reach 3/4 years but add no synergy beyond the sum. The best single factors are AAPL-vs-QQQ volume contrasts, scaled by Apple volatility. Smoothing, down-market sign flips and QQQ stress variants all failed, so I will stop those directions. Next I will try to cut the 2022/2024 losses by making the volume signal regime-neutral, using ranks against a longer history and volatility-neutral scaling. I will also try a few different ideas, such as gap/close persistence and drawdown distance, and partners that supply the missing market-state information.",
+  "lessons": [
+    {
+      "name": "aapl_vs_qqq_volume_60d_down_market",
+      "lesson": "Multiplying by the sign of QQQ's 10d trend flipped the volume signal's meaning half the time and destroyed the 2023/2025 gains, so trend-conditioning added noise."
+    },
+    {
+      "name": "aapl_vs_qqq_volume_60d_vol_scaled_smooth",
+      "lesson": "Smoothing volume over 3 days and using a 60d vol normalizer removed the short-lived information in the daily volume surprise and lost in 2022 and 2024."
+    },
+    {
+      "name": "aapl_intraday_vs_qqq_intraday",
+      "lesson": "Relative open-to-close move is mostly the same as the relative close-to-close move, so it gave tiny LR-only gains."
+    },
+    {
+      "name": "nvda_vs_msft_return_gap_lagged_mean",
+      "lesson": "A 5d mean of the NVDA-MSFT gap duplicates NVDA 5d momentum and carries the same regime flipping."
+    },
+    {
+      "name": "qqq_down_day_volume_stress",
+      "lesson": "QQQ volume signed by its 5d trend helped LR slightly but hurt RF and failed in 2022 and 2024, so the stress idea is unstable."
+    },
+    {
+      "name": "aapl_intraday_return_vs_range_position",
+      "lesson": "Close-open location times volume surge gave a big 2025 gain for RF but lost in 2022 and 2024, so it is a high-variance regime-specific signal."
+    }
+  ],
+  "factors": [
+    {
+      "name": "aapl_vs_qqq_volume_60d_vol_scaled_ratio",
+      "mode": "improve",
+      "parent": "aapl_vs_qqq_volume_60d_vol_scaled",
+      "role": "relative_move",
+      "formula": "safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(QQQ_Volume, 60)), add(rolling_std(pct_change(AAPL_Close, 1), 60), 0.005))",
+      "hypothesis": "The 20d vol scaler is noisy in 2022 and 2024 turbulence; a 60d Apple volatility scaler is steadier and keeps the unsmoothed daily volume contrast that worked in 2023 and 2025."
+    },
+    {
+      "name": "aapl_vs_nvda_volume_surge_range_scaled",
+      "mode": "improve",
+      "parent": "aapl_vs_nvda_volume_surge_vol_scaled",
+      "role": "apple_own",
+      "formula": "safe_divide(subtract(zscore(AAPL_Volume, 20), zscore(NVDA_Volume, 20)), add(safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close), 0.005))",
+      "hypothesis": "Scaling by today's range rather than 20d return vol makes the volume contrast adjust to the current day's turbulence, which may cut the 2022 and 2024 losses."
+    },
+    {
+      "name": "aapl_drawdown_from_60d_high_vs_qqq",
+      "mode": "new",
+      "parent": "",
+      "role": "relative_move",
+      "formula": "subtract(subtract(safe_divide(AAPL_Close, rolling_max(AAPL_Close, 60)), 1), subtract(safe_divide(QQQ_Close, rolling_max(QQQ_Close, 60)), 1))",
+      "hypothesis": "The relative distance of Apple from its 60d high versus QQQ's measures Apple's relative strength over a longer horizon, which is not captured by the 20d factors and may anticipate mean reversion."
+    },
+    {
+      "name": "aapl_gap_fill_persistence",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "multiply(subtract(safe_divide(AAPL_Open, lag(AAPL_Close, 1)), 1), sign(subtract(AAPL_Close, AAPL_Open)))",
+      "hypothesis": "Whether the day's intraday move confirmed or faded the overnight gap shows who is in control (gap-and-go versus gap fade), which may predict next-day direction."
+    },
+    {
+      "name": "qqq_range_compression_60d",
+      "mode": "partner",
+      "parent": "aapl_vs_qqq_volume_60d_vol_scaled",
+      "role": "market_condition",
+      "formula": "subtract(zscore(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 5), zscore(safe_divide(subtract(QQQ_High, QQQ_Low), QQQ_Close), 60))",
+      "hypothesis": "A short-term versus long-term QQQ range state tells the model whether the market is calming or heating up, the regime that flips the volume signal between 2022/2024 and 2023/2025."
+    },
+    {
+      "name": "msft_nvda_return_vs_aapl_volume_confirm",
+      "mode": "partner",
+      "parent": "aapl_volume_vs_peer_volume",
+      "role": "peer_lead",
+      "formula": "multiply(subtract(multiply(add(pct_change(MSFT_Close, 1), pct_change(NVDA_Close, 1)), 0.5), pct_change(QQQ_Close, 1)), zscore(QQQ_Volume, 60))",
+      "hypothesis": "Peer outperformance versus QQQ, weighted by market volume, shows whether tech leadership is backed by participation and adds a directional component to the unsigned volume contrasts."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 22029,
+    "output_tokens": 2114
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}

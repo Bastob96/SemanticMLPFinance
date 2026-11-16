@@ -1,0 +1,85 @@
+{
+  "reflection": "Nothing has joined the team. Most factors help in 2023 and 2025 but hurt in 2024, so one-day intraday and relative quantities look like regime-dependent noise. The best signs of life are volume (qqq_volume_surge_peer) and smoothed close location (aapl_close_loc_5d_mean). Both help both models, but they fail in 2022 and 2024. I will try smoothing and normalising these so they are less regime-dependent, and add mean-reversion and volume-price features that are different from the existing ones. I will also try partners built from the peers' volume and trend.",
+  "lessons": [
+    {
+      "name": "aapl_gap_rolling_mean_5",
+      "lesson": "Smoothing the relative gap did not remove its 2024 damage; overnight gaps carry little stable next-day signal."
+    },
+    {
+      "name": "aapl_close_loc_5d_mean",
+      "lesson": "Smoothed close location helped in 2023 and 2025 for both models but its effect flipped in 2022 and 2024, so it is only weakly informative."
+    },
+    {
+      "name": "peer_dispersion_1d",
+      "lesson": "MSFT-NVDA disagreement is new information and helped RF in three years, but it hurt badly in 2024 so its effect is regime-dependent."
+    },
+    {
+      "name": "aapl_vs_qqq_vol_20",
+      "lesson": "The relative volatility ratio mostly duplicates AAPL volatility and had no stable directional meaning."
+    },
+    {
+      "name": "msft_nvda_5d_spread_to_aapl",
+      "lesson": "The 5-day lag spread is close to NVDA_cum_return_5d and AAPL_cum_return_5d, so it adds almost nothing and gave RF only a tiny gain."
+    },
+    {
+      "name": "qqq_volume_surge_peer",
+      "lesson": "QQQ volume surge helps both models in stressed 2023 and 2025 but hurt in 2022 and 2024, which suggests it only matters in some regimes."
+    }
+  ],
+  "factors": [
+    {
+      "name": "qqq_volume_surge_signed_5d",
+      "mode": "improve",
+      "parent": "qqq_volume_surge_peer",
+      "role": "peer_lead",
+      "formula": "multiply(subtract(safe_divide(QQQ_Volume, rolling_mean(QQQ_Volume, 20)), 1), sign(pct_change(QQQ_Close, 1)))",
+      "hypothesis": "Volume surge without direction failed in 2022 and 2024 because heavy volume on up days and down days means different things; signing it by QQQ's daily direction separates capitulation from rallies."
+    },
+    {
+      "name": "aapl_close_loc_10d_centered",
+      "mode": "improve",
+      "parent": "aapl_close_loc_5d_mean",
+      "role": "apple_own",
+      "formula": "subtract(rolling_mean(safe_divide(subtract(AAPL_Close, AAPL_Low), subtract(AAPL_High, AAPL_Low)), 10), 0.5)",
+      "hypothesis": "A longer 10-day window reduces the noise that made the 5-day version flip sign in 2022 and 2024, and centering at 0.5 makes it read as buying or selling pressure."
+    },
+    {
+      "name": "aapl_high_low_reversal_5d",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "safe_divide(subtract(AAPL_Close, rolling_min(AAPL_Low, 10)), subtract(rolling_max(AAPL_High, 10), rolling_min(AAPL_Low, 10)))",
+      "hypothesis": "Position inside the 10-day high-low channel captures stretched or oversold states, which differs from the moving-average and return factors and may mean-revert."
+    },
+    {
+      "name": "aapl_volume_price_pressure",
+      "mode": "new",
+      "parent": "",
+      "role": "apple_own",
+      "formula": "multiply(sign(pct_change(AAPL_Close, 1)), subtract(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20)), 1))",
+      "hypothesis": "Volume on an up or down day signals conviction or exhaustion, and the existing factors do not combine volume with return direction."
+    },
+    {
+      "name": "nvda_volume_surge_lead",
+      "mode": "partner",
+      "parent": "qqq_volume_surge_peer",
+      "role": "relative_move",
+      "formula": "subtract(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20)), safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 20)))",
+      "hypothesis": "Apple's volume surge relative to NVDA's shows whether market-wide activity is Apple-specific, and it complements QQQ's volume surge as a market-condition state."
+    },
+    {
+      "name": "qqq_trend_vs_aapl_trend_20d",
+      "mode": "partner",
+      "parent": "aapl_close_loc_5d_mean",
+      "role": "market_condition",
+      "formula": "subtract(pct_change(QQQ_Close, 20), pct_change(AAPL_Close, 20))",
+      "hypothesis": "Apple's close location shows short-term pressure; the 20-day lag between QQQ and Apple gives the longer-term context that tells whether pressure is likely to continue or revert."
+    }
+  ],
+  "_usage": {
+    "input_tokens": 9441,
+    "output_tokens": 1793
+  },
+  "_model": "claude-sonnet-5-5",
+  "_stop_reason": "tool_use"
+}
