@@ -13,6 +13,8 @@ Differences from version 1 (llm.build_prompt):
 
 from __future__ import annotations
 
+import copy
+
 from .formula import INPUTS, WINDOWS, operator_guide
 
 ROLES = {
@@ -88,7 +90,7 @@ def rules_text(rules) -> str:
 
 
 def build_prompt_v2(*, round_no, n_improve, n_new, n_partner, base_formulas, stage1_top, market,
-                    notebook, team_text, promising_text, pairs_text, rules, previous_names):
+                    notebook, team_text, promising_text, pairs_text, rules, previous_names, lessons_block=""):
     base = "\n".join(f"- {k} = {v}" for k, v in base_formulas.items())
     roles = "\n".join(f"- {k}: {v}" for k, v in ROLES.items())
     lessons_task = ("Write a one-sentence lesson for each of these factors from the previous round: "
@@ -111,7 +113,7 @@ and Random Forest (RF), and shown for each year and each model.
 2. Team trial: the factor is added to the 22 factors plus the selected team.
 3. Pair trial: promising factors of different roles are added two at a time.
 {rules_text(rules)}
-
+{lessons_block}
 THE 22 EXISTING FACTORS (do not repeat them)
 {base}
 
@@ -233,3 +235,39 @@ Propose exactly {n} factors in one answer.
    Apple against the market).
 3. No repeats: nothing that copies one of the 22 existing factors or another factor in the batch.
 Answer ONLY by calling the tool propose_factors (no other text)."""
+
+
+# ---------------- informed mode (16 Nov): what the earlier searches taught us ----------------
+# Only validation-based facts are given (which idea earlier SEARCHES kept; near-copies; luck), never anything
+# measured on the Q4 test quarters, so the Q4 test of this run stays a fair test.
+
+TOOL_V2_INFORMED = copy.deepcopy(TOOL_V2)
+_item = TOOL_V2_INFORMED["input_schema"]["properties"]["factors"]["items"]
+_item["properties"]["expected_sign"] = {
+    "type": "string", "enum": ["higher_means_up", "higher_means_down"],
+    "description": "stated in advance: does a HIGHER value of the factor make an up day tomorrow more or less likely?"}
+_item["required"] = _item["required"] + ["expected_sign"]
+
+INFORMED_LESSONS = """
+WHAT EARLIER SEARCHES TAUGHT US (use it)
+1. Some ideas were selected again and again by separate earlier searches (selection on the validation
+   quarters only). They have the most support; explore their neighbourhoods (another peer or QQQ, a 3- or
+   5-day average, a z-score) and design partners of a different role, but do not resubmit them as they are:
+   a. Apple's volume surge relative to NVIDIA's (3 searches, two different models), e.g.
+      subtract(log(safe_divide(AAPL_Volume, rolling_mean(AAPL_Volume, 20))), log(safe_divide(NVDA_Volume, rolling_mean(NVDA_Volume, 20))))
+   b. Apple's 3-day return against its peers (2 searches), e.g.
+      subtract(rolling_mean(pct_change(AAPL_Close, 1), 3), multiply(add(rolling_mean(pct_change(MSFT_Close, 1), 3), rolling_mean(pct_change(NVDA_Close, 1), 3)), 0.5))
+   c. NVIDIA's daily range relative to Apple's (1 search, and a close variant in another), e.g.
+      subtract(safe_divide(subtract(NVDA_High, NVDA_Low), NVDA_Close), safe_divide(subtract(AAPL_High, AAPL_Low), AAPL_Close))
+2. Many earlier factors were near-copies of the 22 existing factors (similarity 0.9 or more) and added nothing:
+   Apple's price against its 5-, 10- or 20-day average or its 20-day high, z-scores of returns or of volume,
+   peers' 1-day returns. Already covered by the 22: Apple's returns over 1-20 days, its volatility, distance
+   from its 20-day average, volume against its average, its daily range, and QQQ, MSFT and NVDA returns over
+   1 and 5 days. Look for information the 22 do not carry.
+3. Small validation gains are mostly luck: a random-number factor passes a single bar about 1 time in 30, and
+   the best of many random factors looks good. Do not chase a factor that helped in one year; propose ideas
+   with a clear mechanism.
+4. For EVERY factor state expected_sign in advance: higher_means_up if a higher value should make an up day
+   tomorrow more likely, higher_means_down otherwise. After the search each factor's direction is checked in
+   every year; a factor whose direction flips between years is not trusted.
+"""

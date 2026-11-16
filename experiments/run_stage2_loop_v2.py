@@ -37,7 +37,7 @@ from src.stage2.formula import wide_prices  # noqa: E402
 from src.stage2.llm import ClaudeProposer  # noqa: E402
 from src.stage2.loop_v2 import (LoopV2, NoiseBatchProposer, ReplayProposer, TemplateBatchProposer,  # noqa: E402
                                 TemplateProposerV2)
-from src.stage2.prompt_v2 import SYSTEM_BATCH, SYSTEM_V2, TOOL_BATCH, TOOL_V2  # noqa: E402
+from src.stage2.prompt_v2 import SYSTEM_BATCH, SYSTEM_V2, TOOL_BATCH, TOOL_V2, TOOL_V2_INFORMED  # noqa: E402
 from src.stage2.selection import Rules  # noqa: E402
 
 warnings.filterwarnings("ignore")
@@ -64,6 +64,8 @@ if __name__ == "__main__":
     ap.add_argument("--no-pairs", action="store_true", help="ablation: switch the pair trials off")
     ap.add_argument("--batch", type=int, default=0,
                     help="batch mode (Liu, 12 Nov): this many factors in one call, then one search (sets --rounds 1)")
+    ap.add_argument("--informed", action="store_true",
+                    help="informed mode (16 Nov): the lessons of earlier searches, and every factor's direction stated in advance")
     ap.add_argument("--jobs", type=int, default=0,
                     help="parallel processes for testing factors (0 = all cores in batch mode, 1 otherwise); same results")
     args = ap.parse_args()
@@ -75,7 +77,7 @@ if __name__ == "__main__":
     if args.proposer == "claude" and args.batch:
         proposer = ClaudeProposer(args.model, max_tokens=32000, tool=TOOL_BATCH, system=SYSTEM_BATCH)
     elif args.proposer == "claude":
-        proposer = ClaudeProposer(args.model, tool=TOOL_V2, system=SYSTEM_V2)
+        proposer = ClaudeProposer(args.model, tool=TOOL_V2_INFORMED if args.informed else TOOL_V2, system=SYSTEM_V2)
     elif args.proposer == "replay":
         proposer = ReplayProposer(args.replay)
         args.rounds = len(list(Path(args.replay).glob("round_*_response.json")))
@@ -91,6 +93,7 @@ if __name__ == "__main__":
 
     tag = args.proposer if args.proposer != "replay" else f"replay_{Path(args.replay).name}"
     tag += ("_nofeedback" if args.no_feedback else "") + ("_nopairs" if args.no_pairs else "")
+    tag += "_informed" if args.informed else ""
     tag += f"_batch{args.batch}" + (f"_seed{args.seed}" if args.proposer in ("template", "noise") else "") if args.batch else ""
     if args.proposer == "claude" and args.model != "claude-sonnet-5-5":
         tag += "_" + args.model.replace("claude-", "")
@@ -101,7 +104,7 @@ if __name__ == "__main__":
                   n_improve=args.improve, n_new=args.new, n_partner=args.partner,
                   feedback=not args.no_feedback, pairs_on=not args.no_pairs,
                   batch=args.batch, allow_noise=args.proposer == "noise",
-                  n_jobs=args.jobs or (-1 if args.batch else 1))
+                  n_jobs=args.jobs or (-1 if args.batch else 1), informed=args.informed)
 
     start = 1
     if args.resume and (out / "scoreboard.csv").exists():

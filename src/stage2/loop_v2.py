@@ -42,7 +42,7 @@ from .context import BASE_FORMULAS, market_summary, stage1_importance
 from .feedback import board_records, lab_notebook
 from .formula import FormulaError, evaluate, validate
 from .llm import RandomProposer, dump
-from .prompt_v2 import build_prompt_batch, build_prompt_v2
+from .prompt_v2 import INFORMED_LESSONS, build_prompt_batch, build_prompt_v2
 from .scoring import BASE, Scorer
 from .curve import Curve
 from .selection import Rules, choose_pairs, group_of, is_promising, passes, summarise_result
@@ -70,6 +70,7 @@ class LoopV2:
     batch: int = 0                                # batch mode: this many factors in one call (Liu, 12 Nov)
     allow_noise: bool = False                     # accept noise(<seed>) formulas (random-number check)
     n_jobs: int = 1                               # test many factors at once in parallel processes (same results)
+    informed: bool = False                        # informed mode (16 Nov): lessons + direction stated in advance
     board: list = field(default_factory=list)     # one record per factor tried
     pairs: list = field(default_factory=list)     # one record per pair trial
     team: list = field(default_factory=list)      # names of the selected team, in the order they joined
@@ -156,6 +157,7 @@ class LoopV2:
                "parent": cand.get("parent", "") or "", "role": cand.get("role", "") or "",
                "formula": str(cand.get("formula", "")),
                "hypothesis": cand.get("hypothesis", "") or cand.get("meaning", ""),
+               "expected_sign": cand.get("expected_sign", "") or "",
                "status": "invalid", "reason": "", "lesson": "", "how_selected": ""}
         names = {r["name"] for r in self.board} | set(BASE)
         base_name, k = rec["name"], 1
@@ -360,7 +362,8 @@ class LoopV2:
             prompt = build_prompt_v2(round_no=round_no, n_improve=self.n_improve, n_new=self.n_new,
                                      n_partner=self.n_partner, base_formulas=BASE_FORMULAS,
                                      stage1_top=self.stage1_top, market=self.market,
-                                     rules=self.rules.as_dict(), previous_names=previous, **texts)
+                                     rules=self.rules.as_dict(), previous_names=previous,
+                                     lessons_block=INFORMED_LESSONS if self.informed else "", **texts)
         tag = f"round_{round_no:02d}"
         (self.out_dir / f"{tag}_prompt.txt").write_text(prompt)
         response = self.proposer(prompt)

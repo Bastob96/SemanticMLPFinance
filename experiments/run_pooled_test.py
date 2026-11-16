@@ -64,6 +64,7 @@ if __name__ == "__main__":
     ap.add_argument("--boot", type=int, default=2000, help="bootstrap resamples")
     ap.add_argument("--jobs", type=int, default=-1, help="parallel processes for the random-number sets")
     ap.add_argument("--out", type=Path, default=OUT)
+    ap.add_argument("--name", default="summary.csv", help="file name of the summary (the random-number sets are shared)")
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
 
@@ -106,5 +107,5 @@ if __name__ == "__main__":
                   f"({r['auc_gain']:+.3f}, 95% {r['auc_low']:+.3f} to {r['auc_high']:+.3f}, p={r['p_auc']:.2f}) | "
                   f"bal. acc. {r['bal_gain']:+.3f} (p={r['p_bal']:.2f})", flush=True)
     summary = pd.DataFrame(rows)
-    summary.to_csv(args.out / "summary.csv", index=False)
-    print(f"\nWrote {args.out / 'summary.csv'} ({len(summary)} rows)")
+    summary.to_csv(args.out / args.name, index=False)
+    print(f"\nWrote {args.out / args.name} ({len(summary)} rows)")
