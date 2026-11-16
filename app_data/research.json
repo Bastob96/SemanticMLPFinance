@@ -1,0 +1,791 @@
+{
+ "built_from": "experiments/run_direction_test.py and experiments/check_direction_time_order.py, 16 Nov 2026",
+ "models": {
+  "Opus 5.5": {
+   "blind_all_days": {
+    "rate": 0.63,
+    "n": 100,
+    "p_better": 0.118376324735053,
+    "p_worse": 0.9018196360727856
+   },
+   "blind_q4": {
+    "rate": 0.58,
+    "n": 100,
+    "p_better": 0.2045590881823635,
+    "p_worse": 0.826634673065387
+   },
+   "feedback_q4": {
+    "rate": 0.7464788732394366,
+    "n": 71,
+    "p_better": 0.0105978804239152,
+    "p_worse": 0.9938012397520496
+   },
+   "data_alone_q4": 0.7183098591549296,
+   "signal_blind_q4": {
+    "auc": 0.5456887041132242,
+    "p": 0.10497900419916016
+   },
+   "signal_feedback_q4": {
+    "auc": 0.6193218575851394,
+    "p": 0.0009998000399920016
+   },
+   "lesson": "The clearest round-1 pattern was volatility: range and volatility in AAPL, QQQ, NVDA and MSFT went with up days, which looks like a risk premium and rebounds after stress. Trends over 20 to 60 days reversed, so returns, distance above moving averages and closeness to highs all pointed down, for Apple, the market and the peers alike. Short-term peer and market news worked the other way: overnight gaps, MSFT's close position and returns measured against their own recent history in standard deviations continued into the next day. Apple's moves against the market mostly reversed, except the session return relative to QQQ, which continued."
+  },
+  "Fable 5.2": {
+   "blind_all_days": {
+    "rate": 0.26,
+    "n": 100,
+    "p_better": 0.981003799240152,
+    "p_worse": 0.0233953209358128
+   },
+   "blind_q4": {
+    "rate": 0.23,
+    "n": 100,
+    "p_better": 0.996000799840032,
+    "p_worse": 0.0053989202159568
+   },
+   "feedback_q4": {
+    "rate": 0.7222222222222222,
+    "n": 72,
+    "p_better": 0.020995800839832,
+    "p_worse": 0.98500299940012
+   },
+   "data_alone_q4": 0.6944444444444444,
+   "signal_blind_q4": {
+    "auc": 0.4193186908447589,
+    "p": 0.9828034393121375
+   },
+   "signal_feedback_q4": {
+    "auc": 0.600422821760283,
+    "p": 0.003799240151969606
+   },
+   "lesson": "Round 1 showed my instincts were backwards on two points: high volatility and wide ranges (in Apple, QQQ and the peers) precede more up days, not fewer, and long-horizon strength (60-day returns, distance above the 60-day average, closeness to highs) precedes fewer, so Apple mean-reverts at the monthly-to-quarterly horizon and pays a risk premium in turbulent regimes. At the one-day horizon peer and market strength (MSFT return and close position, NVDA and QQQ gaps, NVDA volume) mildly continues into Apple rather than reversing. Apple-specific excess (outperforming QQQ or MSFT, a range or volume spike versus its own norm) mildly reverses, so this batch leans on those consistent multi-year patterns rather than on any single small edge."
+  },
+  "Haiku 5.5": {
+   "blind_all_days": {
+    "rate": 0.3958333333333333,
+    "n": 96,
+    "p_better": 0.8374325134973005,
+    "p_worse": 0.1857628474305139
+   },
+   "blind_q4": {
+    "rate": 0.4479166666666667,
+    "n": 96,
+    "p_better": 0.6962607478504299,
+    "p_worse": 0.3383323335332933
+   },
+   "feedback_q4": {
+    "rate": 0.5783132530120482,
+    "n": 83,
+    "p_better": 0.155368926214757,
+    "p_worse": 0.882623475304939
+   },
+   "data_alone_q4": 0.6987951807228916,
+   "signal_blind_q4": {
+    "auc": 0.5026658823529412,
+    "p": 0.46190761847630474
+   },
+   "signal_feedback_q4": {
+    "auc": 0.5558029190623618,
+    "p": 0.0615876824635073
+   },
+   "lesson": "Round 1 showed that short-horizon volatility and range measures were followed by up days, while longer trend, drawdown and moving-average deviations were followed by down days, which points to mean reversion after extended moves. Apple's own intraday strength and close position within the day were followed by up days, but Apple's short-term outperformance versus QQQ and MSFT was followed by down days. This round I lean on those patterns: volatility and range up, stretched trend or relative strength down, and I use new windows and constructions rather than rewording round-1 factors."
+  }
+ },
+ "time_order": [
+  {
+   "pool": "the 22 existing factors",
+   "factors": 22,
+   "directions": "all years",
+   "auc_q4": 0.5886112517,
+   "p": 0.0089982004,
+   "vs_22": null,
+   "vs_22_low": null,
+   "vs_22_high": null,
+   "p_vs_22": null,
+   "random_95th": null
+  },
+  {
+   "pool": "the 22 existing factors",
+   "factors": 22,
+   "directions": "past only",
+   "auc_q4": 0.5582940823,
+   "p": 0.0571885623,
+   "vs_22": null,
+   "vs_22_low": null,
+   "vs_22_high": null,
+   "p_vs_22": null,
+   "random_95th": null
+  },
+  {
+   "pool": "the 22 existing factors",
+   "factors": 22,
+   "directions": "other years",
+   "auc_q4": 0.5694639009,
+   "p": 0.0311937612,
+   "vs_22": null,
+   "vs_22_low": null,
+   "vs_22_high": null,
+   "p_vs_22": null,
+   "random_95th": null
+  },
+  {
+   "pool": "fable-5-2, round 1 (blind)",
+   "factors": 100,
+   "directions": "stated",
+   "auc_q4": 0.4193186908,
+   "p": 0.9828034393,
+   "vs_22": -0.1684555427,
+   "vs_22_low": -0.2733062212,
+   "vs_22_high": -0.0596841952,
+   "p_vs_22": 0.9975,
+   "random_95th": null
+  },
+  {
+   "pool": "fable-5-2, round 1 (blind)",
+   "factors": 100,
+   "directions": "all years",
+   "auc_q4": 0.5977095091,
+   "p": 0.0051989602,
+   "vs_22": 0.0091177712,
+   "vs_22_low": -0.0517728547,
+   "vs_22_high": 0.0686651208,
+   "p_vs_22": 0.3805,
+   "random_95th": null
+  },
+  {
+   "pool": "fable-5-2, round 1 (blind)",
+   "factors": 100,
+   "directions": "past only",
+   "auc_q4": 0.5971021495,
+   "p": 0.0051989602,
+   "vs_22": 0.0391683791,
+   "vs_22_low": -0.0200208333,
+   "vs_22_high": 0.0956593592,
+   "p_vs_22": 0.0955,
+   "random_95th": null
+  },
+  {
+   "pool": "fable-5-2, round 1 (blind)",
+   "factors": 100,
+   "directions": "other years",
+   "auc_q4": 0.566686015,
+   "p": 0.0365926815,
+   "vs_22": -0.0020223449,
+   "vs_22_low": -0.0719767681,
+   "vs_22_high": 0.065949463,
+   "p_vs_22": 0.5185,
+   "random_95th": null
+  },
+  {
+   "pool": "fable-5-2, round 2 (new ideas)",
+   "factors": 72,
+   "directions": "stated",
+   "auc_q4": 0.6004228218,
+   "p": 0.0037992402,
+   "vs_22": 0.0117812694,
+   "vs_22_low": -0.0599453461,
+   "vs_22_high": 0.082835968,
+   "p_vs_22": 0.371,
+   "random_95th": null
+  },
+  {
+   "pool": "fable-5-2, round 2 (new ideas)",
+   "factors": 72,
+   "directions": "all years",
+   "auc_q4": 0.6088496418,
+   "p": 0.0015996801,
+   "vs_22": 0.0198919491,
+   "vs_22_low": -0.0484530459,
+   "vs_22_high": 0.0944132084,
+   "p_vs_22": 0.29,
+   "random_95th": null
+  },
+  {
+   "pool": "fable-5-2, round 2 (new ideas)",
+   "factors": 72,
+   "directions": "past only",
+   "auc_q4": 0.6150405838,
+   "p": 0.0009998,
+   "vs_22": 0.057170665,
+   "vs_22_low": -0.0194367993,
+   "vs_22_high": 0.1307635337,
+   "p_vs_22": 0.073,
+   "random_95th": null
+  },
+  {
+   "pool": "fable-5-2, round 2 (new ideas)",
+   "factors": 72,
+   "directions": "other years",
+   "auc_q4": 0.6052602919,
+   "p": 0.0013997201,
+   "vs_22": 0.0362190953,
+   "vs_22_low": -0.032014915,
+   "vs_22_high": 0.1061493785,
+   "p_vs_22": 0.15,
+   "random_95th": null
+  },
+  {
+   "pool": "haiku-5-5, round 1 (blind)",
+   "factors": 96,
+   "directions": "stated",
+   "auc_q4": 0.5026658824,
+   "p": 0.4619076185,
+   "vs_22": -0.0860935572,
+   "vs_22_low": -0.193001924,
+   "vs_22_high": 0.016710839,
+   "p_vs_22": 0.949,
+   "random_95th": null
+  },
+  {
+   "pool": "haiku-5-5, round 1 (blind)",
+   "factors": 96,
+   "directions": "all years",
+   "auc_q4": 0.5834193543,
+   "p": 0.0119976005,
+   "vs_22": -0.0048682257,
+   "vs_22_low": -0.0575869595,
+   "vs_22_high": 0.0480257259,
+   "p_vs_22": 0.5675,
+   "random_95th": null
+  },
+  {
+   "pool": "haiku-5-5, round 1 (blind)",
+   "factors": 96,
+   "directions": "past only",
+   "auc_q4": 0.5823571694,
+   "p": 0.0145970806,
+   "vs_22": 0.0250671465,
+   "vs_22_low": -0.0305273423,
+   "vs_22_high": 0.0809329629,
+   "p_vs_22": 0.1805,
+   "random_95th": null
+  },
+  {
+   "pool": "haiku-5-5, round 1 (blind)",
+   "factors": 96,
+   "directions": "other years",
+   "auc_q4": 0.5541435117,
+   "p": 0.0691861628,
+   "vs_22": -0.0144355771,
+   "vs_22_low": -0.0836687138,
+   "vs_22_high": 0.0544892846,
+   "p_vs_22": 0.6575,
+   "random_95th": null
+  },
+  {
+   "pool": "haiku-5-5, round 2 (new ideas)",
+   "factors": 83,
+   "directions": "stated",
+   "auc_q4": 0.5558029191,
+   "p": 0.0615876825,
+   "vs_22": -0.0321342954,
+   "vs_22_low": -0.1166535052,
+   "vs_22_high": 0.0514207135,
+   "p_vs_22": 0.7635,
+   "random_95th": null
+  },
+  {
+   "pool": "haiku-5-5, round 2 (new ideas)",
+   "factors": 83,
+   "directions": "all years",
+   "auc_q4": 0.5859229544,
+   "p": 0.0109978004,
+   "vs_22": -0.0019833296,
+   "vs_22_low": -0.0662800255,
+   "vs_22_high": 0.0593210897,
+   "p_vs_22": 0.5225,
+   "random_95th": null
+  },
+  {
+   "pool": "haiku-5-5, round 2 (new ideas)",
+   "factors": 83,
+   "directions": "past only",
+   "auc_q4": 0.5991950287,
+   "p": 0.0031993601,
+   "vs_22": 0.0420993832,
+   "vs_22_low": -0.034271728,
+   "vs_22_high": 0.1175380389,
+   "p_vs_22": 0.139,
+   "random_95th": null
+  },
+  {
+   "pool": "haiku-5-5, round 2 (new ideas)",
+   "factors": 83,
+   "directions": "other years",
+   "auc_q4": 0.5410014507,
+   "p": 0.1263747251,
+   "vs_22": -0.0269174342,
+   "vs_22_low": -0.1006915619,
+   "vs_22_high": 0.0536820042,
+   "p_vs_22": 0.7385,
+   "random_95th": null
+  },
+  {
+   "pool": "opus-5-5, round 1 (blind)",
+   "factors": 100,
+   "directions": "stated",
+   "auc_q4": 0.5456887041,
+   "p": 0.1049790042,
+   "vs_22": -0.0427864205,
+   "vs_22_low": -0.1149925968,
+   "vs_22_high": 0.0322361092,
+   "p_vs_22": 0.8705,
+   "random_95th": null
+  },
+  {
+   "pool": "opus-5-5, round 1 (blind)",
+   "factors": 100,
+   "directions": "all years",
+   "auc_q4": 0.5898220787,
+   "p": 0.0085982803,
+   "vs_22": 0.0014485556,
+   "vs_22_low": -0.0466804758,
+   "vs_22_high": 0.0485582497,
+   "p_vs_22": 0.4635,
+   "random_95th": null
+  },
+  {
+   "pool": "opus-5-5, round 1 (blind)",
+   "factors": 100,
+   "directions": "past only",
+   "auc_q4": 0.5916168952,
+   "p": 0.0073985203,
+   "vs_22": 0.0341138003,
+   "vs_22_low": -0.028572842,
+   "vs_22_high": 0.0974484997,
+   "p_vs_22": 0.1495,
+   "random_95th": null
+  },
+  {
+   "pool": "opus-5-5, round 1 (blind)",
+   "factors": 100,
+   "directions": "other years",
+   "auc_q4": 0.579846475,
+   "p": 0.0153969206,
+   "vs_22": 0.0112981302,
+   "vs_22_low": -0.0504954552,
+   "vs_22_high": 0.0706123115,
+   "p_vs_22": 0.358,
+   "random_95th": null
+  },
+  {
+   "pool": "opus-5-5, round 2 (new ideas)",
+   "factors": 71,
+   "directions": "stated",
+   "auc_q4": 0.6193218576,
+   "p": 0.0009998,
+   "vs_22": 0.0299629129,
+   "vs_22_low": -0.0408490325,
+   "vs_22_high": 0.1002225476,
+   "p_vs_22": 0.2045,
+   "random_95th": null
+  },
+  {
+   "pool": "opus-5-5, round 2 (new ideas)",
+   "factors": 71,
+   "directions": "all years",
+   "auc_q4": 0.6056971429,
+   "p": 0.0015996801,
+   "vs_22": 0.0167724206,
+   "vs_22_low": -0.0572009464,
+   "vs_22_high": 0.0889985708,
+   "p_vs_22": 0.3205,
+   "random_95th": null
+  },
+  {
+   "pool": "opus-5-5, round 2 (new ideas)",
+   "factors": 71,
+   "directions": "past only",
+   "auc_q4": 0.5918223972,
+   "p": 0.0069986003,
+   "vs_22": 0.0332842623,
+   "vs_22_low": -0.0435354586,
+   "vs_22_high": 0.1063425242,
+   "p_vs_22": 0.182,
+   "random_95th": null
+  },
+  {
+   "pool": "opus-5-5, round 2 (new ideas)",
+   "factors": 71,
+   "directions": "other years",
+   "auc_q4": 0.6009532242,
+   "p": 0.0033993201,
+   "vs_22": 0.0315649457,
+   "vs_22_low": -0.0313762068,
+   "vs_22_high": 0.0951945027,
+   "p_vs_22": 0.1665,
+   "random_95th": null
+  },
+  {
+   "pool": "templates, no LLM (0)",
+   "factors": 99,
+   "directions": "all years",
+   "auc_q4": 0.5183647236,
+   "p": 0.3077384523,
+   "vs_22": -0.0701270948,
+   "vs_22_low": -0.1538202314,
+   "vs_22_high": 0.0132879839,
+   "p_vs_22": 0.9505,
+   "random_95th": null
+  },
+  {
+   "pool": "templates, no LLM (0)",
+   "factors": 99,
+   "directions": "past only",
+   "auc_q4": 0.5249936134,
+   "p": 0.2601479704,
+   "vs_22": -0.0320533803,
+   "vs_22_low": -0.1110425697,
+   "vs_22_high": 0.0473749761,
+   "p_vs_22": 0.775,
+   "random_95th": null
+  },
+  {
+   "pool": "templates, no LLM (0)",
+   "factors": 99,
+   "directions": "other years",
+   "auc_q4": 0.5209572402,
+   "p": 0.2907418516,
+   "vs_22": -0.047075513,
+   "vs_22_low": -0.1416080854,
+   "vs_22_high": 0.0511336493,
+   "p_vs_22": 0.8325,
+   "random_95th": null
+  },
+  {
+   "pool": "templates, no LLM (1)",
+   "factors": 98,
+   "directions": "all years",
+   "auc_q4": 0.5535762052,
+   "p": 0.075584883,
+   "vs_22": -0.0345664825,
+   "vs_22_low": -0.1108917236,
+   "vs_22_high": 0.0453098095,
+   "p_vs_22": 0.808,
+   "random_95th": null
+  },
+  {
+   "pool": "templates, no LLM (1)",
+   "factors": 98,
+   "directions": "past only",
+   "auc_q4": 0.492444582,
+   "p": 0.5864827035,
+   "vs_22": -0.0649592705,
+   "vs_22_low": -0.1448768953,
+   "vs_22_high": 0.0153496798,
+   "p_vs_22": 0.942,
+   "random_95th": null
+  },
+  {
+   "pool": "templates, no LLM (1)",
+   "factors": 98,
+   "directions": "other years",
+   "auc_q4": 0.5412395223,
+   "p": 0.1347730454,
+   "vs_22": -0.0267068744,
+   "vs_22_low": -0.1191941511,
+   "vs_22_high": 0.0701303702,
+   "p_vs_22": 0.712,
+   "random_95th": null
+  },
+  {
+   "pool": "templates, no LLM (2)",
+   "factors": 100,
+   "directions": "all years",
+   "auc_q4": 0.5169953118,
+   "p": 0.3181363727,
+   "vs_22": -0.0704644375,
+   "vs_22_low": -0.1641235121,
+   "vs_22_high": 0.0236730624,
+   "p_vs_22": 0.936,
+   "random_95th": null
+  },
+  {
+   "pool": "templates, no LLM (2)",
+   "factors": 100,
+   "directions": "past only",
+   "auc_q4": 0.5000386378,
+   "p": 0.5016996601,
+   "vs_22": -0.0570918525,
+   "vs_22_low": -0.1470592923,
+   "vs_22_high": 0.0265652953,
+   "p_vs_22": 0.8815,
+   "random_95th": null
+  },
+  {
+   "pool": "templates, no LLM (2)",
+   "factors": 100,
+   "directions": "other years",
+   "auc_q4": 0.5125175055,
+   "p": 0.3697260548,
+   "vs_22": -0.0553484728,
+   "vs_22_low": -0.1531357518,
+   "vs_22_high": 0.0440127502,
+   "p_vs_22": 0.8645,
+   "random_95th": null
+  },
+  {
+   "pool": "random numbers (200 pools of 100)",
+   "factors": 100,
+   "directions": "all years",
+   "auc_q4": 0.4994701237,
+   "p": null,
+   "vs_22": null,
+   "vs_22_low": null,
+   "vs_22_high": null,
+   "p_vs_22": null,
+   "random_95th": 0.5596898107
+  },
+  {
+   "pool": "random numbers (200 pools of 100)",
+   "factors": 100,
+   "directions": "past only",
+   "auc_q4": 0.5024082267,
+   "p": null,
+   "vs_22": null,
+   "vs_22_low": null,
+   "vs_22_high": null,
+   "p_vs_22": null,
+   "random_95th": 0.5732834737
+  },
+  {
+   "pool": "random numbers (200 pools of 100)",
+   "factors": 100,
+   "directions": "other years",
+   "auc_q4": 0.4952334331,
+   "p": null,
+   "vs_22": null,
+   "vs_22_low": null,
+   "vs_22_high": null,
+   "p_vs_22": null,
+   "random_95th": 0.5555505325
+  }
+ ],
+ "fresh_2026": [
+  {
+   "pool": "the 22 existing factors",
+   "factors": 22,
+   "directions": "measured on 2022-2025",
+   "auc_2026": 0.5449183303,
+   "p": 0.1621675665,
+   "vs_22": null,
+   "vs_22_low": null,
+   "vs_22_high": null,
+   "p_vs_22": null,
+   "random_95th": null
+  },
+  {
+   "pool": "fable-5-2, round 1 (blind)",
+   "factors": 100,
+   "directions": "stated",
+   "auc_2026": 0.4925892317,
+   "p": 0.5734853029,
+   "vs_22": -0.054404972,
+   "vs_22_low": -0.1686524181,
+   "vs_22_high": 0.0638798263,
+   "p_vs_22": 0.8245,
+   "random_95th": null
+  },
+  {
+   "pool": "fable-5-2, round 1 (blind)",
+   "factors": 100,
+   "directions": "measured on 2022-2025",
+   "auc_2026": 0.5282819117,
+   "p": 0.2697460508,
+   "vs_22": -0.016280159,
+   "vs_22_low": -0.081932941,
+   "vs_22_high": 0.0487985773,
+   "p_vs_22": 0.686,
+   "random_95th": null
+  },
+  {
+   "pool": "fable-5-2, round 2 (new ideas)",
+   "factors": 72,
+   "directions": "stated",
+   "auc_2026": 0.5307017544,
+   "p": 0.2437512498,
+   "vs_22": -0.0130038424,
+   "vs_22_low": -0.0863616144,
+   "vs_22_high": 0.0616068461,
+   "p_vs_22": 0.638,
+   "random_95th": null
+  },
+  {
+   "pool": "fable-5-2, round 2 (new ideas)",
+   "factors": 72,
+   "directions": "measured on 2022-2025",
+   "auc_2026": 0.5397761645,
+   "p": 0.1857628474,
+   "vs_22": -0.0039820706,
+   "vs_22_low": -0.0768181818,
+   "vs_22_high": 0.0695855489,
+   "p_vs_22": 0.5515,
+   "random_95th": null
+  },
+  {
+   "pool": "haiku-5-5, round 1 (blind)",
+   "factors": 96,
+   "directions": "stated",
+   "auc_2026": 0.5307017544,
+   "p": 0.2529494101,
+   "vs_22": -0.0151160497,
+   "vs_22_low": -0.125993406,
+   "vs_22_high": 0.1034395042,
+   "p_vs_22": 0.604,
+   "random_95th": null
+  },
+  {
+   "pool": "haiku-5-5, round 1 (blind)",
+   "factors": 96,
+   "directions": "measured on 2022-2025",
+   "auc_2026": 0.5508166969,
+   "p": 0.1341731654,
+   "vs_22": 0.0056937211,
+   "vs_22_low": -0.0474903042,
+   "vs_22_high": 0.0589032895,
+   "p_vs_22": 0.401,
+   "random_95th": null
+  },
+  {
+   "pool": "haiku-5-5, round 2 (new ideas)",
+   "factors": 83,
+   "directions": "stated",
+   "auc_2026": 0.5480943739,
+   "p": 0.1415716857,
+   "vs_22": 0.0033288979,
+   "vs_22_low": -0.0868520632,
+   "vs_22_high": 0.0925825204,
+   "p_vs_22": 0.461,
+   "random_95th": null
+  },
+  {
+   "pool": "haiku-5-5, round 2 (new ideas)",
+   "factors": 83,
+   "directions": "measured on 2022-2025",
+   "auc_2026": 0.5193587417,
+   "p": 0.324735053,
+   "vs_22": -0.0255976031,
+   "vs_22_low": -0.0983220314,
+   "vs_22_high": 0.0464102066,
+   "p_vs_22": 0.7575,
+   "random_95th": null
+  },
+  {
+   "pool": "opus-5-5, round 1 (blind)",
+   "factors": 100,
+   "directions": "stated",
+   "auc_2026": 0.5248033878,
+   "p": 0.2933413317,
+   "vs_22": -0.019210148,
+   "vs_22_low": -0.0797968891,
+   "vs_22_high": 0.0415546882,
+   "p_vs_22": 0.7295,
+   "random_95th": null
+  },
+  {
+   "pool": "opus-5-5, round 1 (blind)",
+   "factors": 100,
+   "directions": "measured on 2022-2025",
+   "auc_2026": 0.5350877193,
+   "p": 0.2225554889,
+   "vs_22": -0.0095909941,
+   "vs_22_low": -0.0607791648,
+   "vs_22_high": 0.0439349213,
+   "p_vs_22": 0.6485,
+   "random_95th": null
+  },
+  {
+   "pool": "opus-5-5, round 2 (new ideas)",
+   "factors": 71,
+   "directions": "stated",
+   "auc_2026": 0.5777374471,
+   "p": 0.0377924415,
+   "vs_22": 0.0333841711,
+   "vs_22_low": -0.0307280034,
+   "vs_22_high": 0.0989391411,
+   "p_vs_22": 0.174,
+   "random_95th": null
+  },
+  {
+   "pool": "opus-5-5, round 2 (new ideas)",
+   "factors": 71,
+   "directions": "measured on 2022-2025",
+   "auc_2026": 0.5406836056,
+   "p": 0.1815636873,
+   "vs_22": -0.0040313921,
+   "vs_22_low": -0.0853017583,
+   "vs_22_high": 0.0757849865,
+   "p_vs_22": 0.525,
+   "random_95th": null
+  },
+  {
+   "pool": "templates, no LLM (0)",
+   "factors": 99,
+   "directions": "measured on 2022-2025",
+   "auc_2026": 0.5353901996,
+   "p": 0.2095580884,
+   "vs_22": -0.0108970631,
+   "vs_22_low": -0.1037992563,
+   "vs_22_high": 0.0805350602,
+   "p_vs_22": 0.579,
+   "random_95th": null
+  },
+  {
+   "pool": "templates, no LLM (1)",
+   "factors": 98,
+   "directions": "measured on 2022-2025",
+   "auc_2026": 0.5133091349,
+   "p": 0.3807238552,
+   "vs_22": -0.0327495845,
+   "vs_22_low": -0.121720434,
+   "vs_22_high": 0.0530198312,
+   "p_vs_22": 0.7705,
+   "random_95th": null
+  },
+  {
+   "pool": "templates, no LLM (2)",
+   "factors": 100,
+   "directions": "measured on 2022-2025",
+   "auc_2026": 0.5248033878,
+   "p": 0.2873425315,
+   "vs_22": -0.0211817893,
+   "vs_22_low": -0.1215200481,
+   "vs_22_high": 0.0799935359,
+   "p_vs_22": 0.6625,
+   "random_95th": null
+  },
+  {
+   "pool": "random numbers (200 pools of 100)",
+   "factors": 100,
+   "directions": "measured on 2022-2025",
+   "auc_2026": 0.4993171506,
+   "p": null,
+   "vs_22": null,
+   "vs_22_low": null,
+   "vs_22_high": null,
+   "p_vs_22": null,
+   "random_95th": 0.5712568058
+  }
+ ],
+ "old_judge": {
+  "note": "Factors kept by the search in the 100-factor batches (three batches each)",
+  "kept": {
+   "LLM (Sonnet 5.5)": [
+    0,
+    0,
+    0
+   ],
+   "Templates (no LLM)": [
+    5,
+    6,
+    0
+   ],
+   "Random numbers": [
+    5,
+    3,
+    3
+   ]
+  }
+ }
+}

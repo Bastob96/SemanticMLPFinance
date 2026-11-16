@@ -3,6 +3,21 @@
 Interpretable financial factor discovery for next-trading-day AAPL prediction
 using machine learning and LLMs.
 
+## Factor Lab: live call from LLM-proposed factors
+
+`app.py` is the interface for the Stage 2 result: a live next-day call for AAPL built from factors that LLMs
+proposed in plain formulas, the reasons behind each call, its full track record against the alternatives
+(the 22 existing factors, template formulas, random numbers, the two classifiers), a browser for every factor,
+the research findings, and a page to test your own formula.
+
+```bash
+python -m pip install -r requirements.txt
+streamlit run app.py
+```
+
+It downloads daily prices from Yahoo Finance and falls back to the saved price file without internet.
+It makes no LLM calls and needs no API key. Design, decisions, tests and deployment steps: `docs/FACTOR_LAB.md`.
+
 ## Interactive research dashboard
 
 The Streamlit dashboard is the presentation layer for the committed Stage 1
