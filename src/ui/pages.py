@@ -55,7 +55,7 @@ def overview(data: DashboardData) -> None:
     hero(
         "SemanticMLPFinance · Research dashboard",
         "Can interpretable factors improve next-day AAPL prediction?",
-        "Explore the Stage 1 baselines, validation-selected backtests, and the Stage 2 LLM factor-discovery experiment. Every number below comes from versioned repository artifacts—not a live or silently changing model.",
+        "Explore the Stage 1 baselines, validation-selected backtests, and the Stage 2 LLM factor-discovery experiment. Every number below comes from versioned repository artifacts—not a silently changing model. The one exception is the clearly labelled Live prediction page.",
     )
 
     stage1_2025 = data.stage1.loc[data.stage1.year.eq(2025) & data.stage1.split.eq("test")]
@@ -364,7 +364,7 @@ def methodology(data: DashboardData) -> None:
     hero(
         "Methods · Reproducibility",
         "How to read—and reproduce—the dashboard",
-        "The interface is a presentation layer over committed files. It does not download prices, call an LLM, train models, or choose configurations when a visitor opens it.",
+        "The interface is a presentation layer over committed files. Apart from the Live prediction page, it does not download prices, call an LLM, train models, or choose configurations when a visitor opens it. The Live page runs the Stage 1 models on current prices and never reads Q4 results.",
     )
     callout(
         f"Pinned source commit: <span class='mono'>{data.manifest['source_commit']}</span><br>Canonical input: <span class='mono'>{data.manifest['canonical_data']}</span>",

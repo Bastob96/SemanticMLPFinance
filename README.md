@@ -6,8 +6,12 @@ using machine learning and LLMs.
 ## Interactive research dashboard
 
 The Streamlit dashboard is the presentation layer for the committed Stage 1
-and Stage 2 outputs. It is intentionally read-only: opening it does not train a
-model, call Claude, download market data, or use Q4 to make a decision.
+and Stage 2 outputs. Its result pages are intentionally read-only: opening them does not train a
+model, call Claude, download market data, or use Q4 to make a decision. The one
+exception is the **Live prediction** page, which follows current prices as trades
+print (live stream) or refreshes every 30 seconds, 1, 2 or 5 minutes. It applies the Stage 1 recipe (2025 Q1 to Q2 training rows)
+to the newest finished US session and never reads Q4 results. It needs internet
+access and `yfinance`, and falls back to the saved data if the download fails.
 
 ```bash
 python -m pip install -r requirements.txt
@@ -23,6 +27,7 @@ The interface includes:
 - the pinned Claude and random-control Stage 2 candidate scoreboards
 - per-year validation gains and the frozen Stage 2 Q4 comparison
 - downloadable result tables and a source-artifact manifest
+- a Live prediction page with a live price stream, timer refresh options, and Stage 1 model calls that update as prices move, plus the Claude factor kept by Stage 2 (NVDA intraday range relative to AAPL) so every model is called with and without it
 
 Dashboard data is pinned by `results/ui/manifest.json`. Do not refresh this
 bundle after inspecting Q4 unless the experimental protocol itself has been
