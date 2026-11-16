@@ -148,3 +148,88 @@ TASK
    condition, design one that describes Apple's relative move, and the other way round.
 Label every factor with its role. Do not resubmit any formula from the notebook.
 Answer ONLY by calling the tool propose_factors (no other text)."""
+
+
+# ---------------- batch mode (Liu, 12 Nov) ----------------
+# Liu: "let [the LLM] generate a lot of solutions at once ... try to generate 100 factors, and then search
+# those 100 factors", and make sure every factor has a semantic meaning, something that "makes sense in
+# 5 minutes". One call, no feedback rounds: Claude proposes the whole batch, then the same tests and keep
+# rules (solo test, team trial, pair trials) search it.
+
+TOOL_BATCH = {
+    "name": "propose_factors",
+    "description": "Return the whole batch of proposed factors.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "factors": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string", "description": "snake_case, unique, says what it measures"},
+                        "role": {"type": "string", "enum": list(ROLES)},
+                        "formula": {"type": "string"},
+                        "meaning": {"type": "string",
+                                    "description": "one or two plain-English sentences a finance student understands "
+                                                   "in 5 minutes: what the factor measures and why it could tell "
+                                                   "whether AAPL closes higher tomorrow"},
+                    },
+                    "required": ["name", "role", "formula", "meaning"],
+                },
+            },
+        },
+        "required": ["factors"],
+    },
+}
+
+SYSTEM_BATCH = """You are a quantitative researcher designing interpretable daily factors for a stock-prediction study.
+Every factor must have a clear economic or behavioural meaning that a finance student could understand in
+five minutes, and its formula must do exactly what that meaning says. Prefer short, readable formulas.
+Never use future information. Write formulas only with the operators and inputs listed."""
+
+
+def build_prompt_batch(*, n, base_formulas, stage1_top, market, rules):
+    base = "\n".join(f"- {k} = {v}" for k, v in base_formulas.items())
+    roles = "\n".join(f"- {k}: {v}" for k, v in ROLES.items())
+    return f"""BATCH OF {n}
+
+GOAL
+Predict whether AAPL closes higher tomorrow than today (binary). A factor is computed after the close of day t.
+
+DATA (daily, adjusted OHLCV, Sept 2021 - Dec 2025)
+Inputs: {", ".join(INPUTS)}
+Market summary up to 30 June 2025:
+{market}
+
+HOW THE BATCH IS SEARCHED
+You propose all {n} factors at once. For each year 2022, 2023, 2024 and 2025 the model is trained on Q1-Q2 and
+scored on Q3 (validation); Q4 is never used in this search. The score is ROC AUC, averaged over Logistic
+Regression and Random Forest. Every factor is tested alone (added to the 22 existing factors), then in a team
+trial (on top of the factors already selected), and promising factors are also tested in pairs.
+{rules_text(rules)}
+
+THE 22 EXISTING FACTORS (do not repeat them)
+{base}
+
+MOST USEFUL EXISTING FACTORS IN STAGE 1
+{stage1_top}
+
+FACTOR ROLES (label every factor with one)
+{roles}
+
+FORMULA LANGUAGE
+Nested function calls only, no + - * / symbols. Windows n must be one of {WINDOWS}.
+{operator_guide()}
+Example: safe_divide(rolling_std(pct_change(AAPL_Close, 1), 5), rolling_std(pct_change(QQQ_Close, 1), 20))
+
+TASK
+Propose exactly {n} factors in one answer.
+1. Interpretable first: every factor needs a clear meaning that makes sense to a finance student in 5 minutes,
+   written in the "meaning" field, and the formula must match that meaning. Keep formulas short: at most
+   about four operators. A factor you cannot explain in plain words does not belong in the batch.
+2. Spread the batch: about a quarter of the factors for each of the four roles, and many different ideas
+   (trend, reversal, volatility, intraday range and close position, gaps, volume, peers leading Apple,
+   Apple against the market).
+3. No repeats: nothing that copies one of the 22 existing factors or another factor in the batch.
+Answer ONLY by calling the tool propose_factors (no other text)."""

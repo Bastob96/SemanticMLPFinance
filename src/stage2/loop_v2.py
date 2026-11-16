@@ -17,6 +17,11 @@ Ablation switches (Liu, 22 Oct: test how much each part of the design matters):
   feedback=False  Claude sees only the names and formulas already tried (so it does not repeat them),
                   with no scores, report cards, team, promising list or pair results.
   pairs=False     no pair trials: factors can only join the team one at a time.
+Batch mode (Liu, 12 Nov): batch=100 asks Claude for 100 factors in one call (each with a plain-English
+meaning that "makes sense in 5 minutes"), with no feedback rounds; the same solo test, team trial and pair
+trials then search the batch. The pair-trial budget is that of an 8-round run (8 x pairs_per_round), so the
+number of "lottery tickets" stays comparable. A formula noise(<seed>) gives pure random numbers (only with
+allow_noise=True), for the random-number check of batch mode.
 finalize() gives the promising list one more team trial at the end. It is off by default in
 experiments/run_stage2_loop_v2.py because the random-number check showed it lets luck in (1 in 18).
 The Q4 test quarters are never used here.
@@ -27,7 +32,7 @@ from __future__ import annotations
 import json
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import numpy as np
@@ -37,7 +42,7 @@ from .context import BASE_FORMULAS, market_summary, stage1_importance
 from .feedback import board_records, lab_notebook
 from .formula import FormulaError, evaluate, validate
 from .llm import RandomProposer, dump
-from .prompt_v2 import build_prompt_v2
+from .prompt_v2 import build_prompt_batch, build_prompt_v2
 from .scoring import BASE, Scorer
 from .curve import Curve
 from .selection import Rules, choose_pairs, group_of, is_promising, passes, summarise_result
@@ -62,6 +67,9 @@ class LoopV2:
     n_partner: int = 2
     feedback: bool = True                         # ablation: False hides all results from Claude
     pairs_on: bool = True                         # ablation: False switches the pair trials off
+    batch: int = 0                                # batch mode: this many factors in one call (Liu, 12 Nov)
+    allow_noise: bool = False                     # accept noise(<seed>) formulas (random-number check)
+    n_jobs: int = 1                               # test many factors at once in parallel processes (same results)
     board: list = field(default_factory=list)     # one record per factor tried
     pairs: list = field(default_factory=list)     # one record per pair trial
     team: list = field(default_factory=list)      # names of the selected team, in the order they joined
@@ -113,6 +121,21 @@ class LoopV2:
             self._py[key] = self.scorer.gains({name: self.values[name]}, {n: self.values[n] for n in team_names})
         return self._py[key]
 
+    def prefetch(self, names, team_names=None):
+        """Run the tests of many factors at once, in parallel processes, and keep them for per_year().
+        The results are exactly the same as one at a time; it is only faster (batch mode tests 100 factors)."""
+        team_names = tuple(sorted(self.team if team_names is None else team_names))
+        todo = [n for n in names if (n, team_names) not in self._py]
+        if self.n_jobs == 1 or len(todo) < 4:
+            return
+        self.per_year(todo[0], team_names)          # first one here, so the 22-factor scores are cached and shared
+        from joblib import Parallel, delayed
+        team = {n: self.values[n] for n in team_names}
+        results = Parallel(n_jobs=self.n_jobs)(
+            delayed(self.scorer.gains)({n: self.values[n]}, team) for n in todo[1:])
+        for n, res in zip(todo[1:], results):
+            self._py[(n, team_names)] = res
+
     def judged(self, per_year, team_names):
         """Summary used for decisions: graded on the curve when the rules say so."""
         if self.curve is None:
@@ -131,7 +154,8 @@ class LoopV2:
     def _build(self, cand, round_no):
         rec = {"round": round_no, "name": str(cand.get("name", "?")), "mode": cand.get("mode", "?"),
                "parent": cand.get("parent", "") or "", "role": cand.get("role", "") or "",
-               "formula": str(cand.get("formula", "")), "hypothesis": cand.get("hypothesis", ""),
+               "formula": str(cand.get("formula", "")),
+               "hypothesis": cand.get("hypothesis", "") or cand.get("meaning", ""),
                "status": "invalid", "reason": "", "lesson": "", "how_selected": ""}
         names = {r["name"] for r in self.board} | set(BASE)
         base_name, k = rec["name"], 1
@@ -144,8 +168,7 @@ class LoopV2:
             rec["reason"] = "duplicate formula"
             return rec
         try:
-            validate(rec["formula"])
-            values = evaluate(rec["formula"], self.prices)
+            values = self.compute(rec["formula"])
         except (FormulaError, KeyError, ValueError) as exc:
             rec["reason"] = str(exc)[:200]
             return rec
@@ -156,6 +179,19 @@ class LoopV2:
         rec["group"] = group_of(rec["formula"], rec["role"])
         rec["status"] = "tested"
         return rec
+
+    def compute(self, formula):
+        """Daily values of a formula (past data only). noise(<seed>) = pure random numbers, for the noise check."""
+        m = re.fullmatch(r"noise\((\d+)\)", formula.replace(" ", ""))
+        if m and self.allow_noise:
+            rng = np.random.default_rng(int(m.group(1)))
+            return pd.Series(rng.standard_normal(len(self.prices)), index=self.prices.index)
+        validate(formula)
+        return evaluate(formula, self.prices)
+
+    def pair_rules(self):
+        """Batch mode gets the pair-trial budget of a whole 8-round run, in its one round."""
+        return replace(self.rules, pairs_per_round=self.rules.pairs_per_round * 8) if self.batch else self.rules
 
     def _write_solo(self, rec, res):
         rec.update(auc_gain=res["gain"], years_helped=res["years"], auc_gain_lr=res["lr"], auc_gain_rf=res["rf"],
@@ -172,6 +208,7 @@ class LoopV2:
         reported, but nothing joins."""
         while True:
             best = None
+            self.prefetch([r["name"] for r in recs if r["status"] != "kept"])
             for r in recs:
                 if r["status"] == "kept":
                     continue
@@ -212,7 +249,7 @@ class LoopV2:
                 forced.append((n, p["name"]))
         new_promising = [n for n in new_names if n in {r["name"] for r in pool}]
         pool_names = [r["name"] for r in pool]
-        for a, b in choose_pairs(new_promising, pool_names, info, self.corr, self.rules, forced):
+        for a, b in choose_pairs(new_promising, pool_names, info, self.corr, self.pair_rules(), forced):
             if a in self.team or b in self.team:
                 continue
             res = summarise_result(self.scorer.gains({a: self.values[a], b: self.values[b]}, self.team_values()))
@@ -316,10 +353,14 @@ class LoopV2:
             texts = dict(notebook="Results are NOT shown in this run. Factors already tried (do not repeat them):\n" + tried,
                          team_text=hidden, promising_text=hidden, pairs_text=hidden)
             previous = []
-        prompt = build_prompt_v2(round_no=round_no, n_improve=self.n_improve, n_new=self.n_new,
-                                 n_partner=self.n_partner, base_formulas=BASE_FORMULAS,
-                                 stage1_top=self.stage1_top, market=self.market,
-                                 rules=self.rules.as_dict(), previous_names=previous, **texts)
+        if self.batch:                           # batch mode: the whole batch in one call, no results shown
+            prompt = build_prompt_batch(n=self.batch, base_formulas=BASE_FORMULAS, stage1_top=self.stage1_top,
+                                        market=self.market, rules=self.rules.as_dict())
+        else:
+            prompt = build_prompt_v2(round_no=round_no, n_improve=self.n_improve, n_new=self.n_new,
+                                     n_partner=self.n_partner, base_formulas=BASE_FORMULAS,
+                                     stage1_top=self.stage1_top, market=self.market,
+                                     rules=self.rules.as_dict(), previous_names=previous, **texts)
         tag = f"round_{round_no:02d}"
         (self.out_dir / f"{tag}_prompt.txt").write_text(prompt)
         response = self.proposer(prompt)
@@ -332,13 +373,14 @@ class LoopV2:
                 if r["round"] == round_no - 1 and r["name"] == item.get("name"):
                     r["lesson"] = str(item.get("lesson", ""))[:300]
 
-        n_total = self.n_improve + self.n_new + self.n_partner
+        n_total = self.batch or (self.n_improve + self.n_new + self.n_partner)
         new = []
         for cand in response.get("factors", [])[:n_total]:
             r = self._build(cand, round_no)          # added one by one, so repeats within a round are caught too
             self.board.append(r)
             new.append(r)
         tested = [r for r in new if r["status"] == "tested"]
+        self.prefetch([r["name"] for r in tested], ())
         for r in tested:                                          # 1. solo test
             res = self.judged(self.per_year(r["name"], ()), ())
             if not res["valid"]:
@@ -394,7 +436,7 @@ class LoopV2:
         for r in self.board:
             if r["status"] == "invalid":
                 continue
-            self.values[r["name"]] = evaluate(r["formula"], self.prices)
+            self.values[r["name"]] = self.compute(r["formula"])
             if "auc_gain" in r:
                 self.solo[r["name"]] = {"valid": True, "gain": r["auc_gain"], "years": r["years_helped"],
                                         "lr": r["auc_gain_lr"], "rf": r["auc_gain_rf"],
@@ -433,6 +475,40 @@ class TemplateProposerV2:
             out.append({"name": f"template_{self.base.rng.randrange(10 ** 6)}", "mode": mode, "parent": parent,
                         "role": "", "formula": self.base._formula(), "hypothesis": "template formula (no LLM)"})
         return {"reflection": "template formulas (no LLM)", "lessons": [], "factors": out}
+
+
+class TemplateBatchProposer:
+    """No-LLM comparison for batch mode: n different template formulas (the same 6 templates as before)."""
+
+    def __init__(self, seed=0):
+        self.base = RandomProposer(seed)
+
+    def __call__(self, prompt):
+        n = int(re.match(r"BATCH OF (\d+)", prompt).group(1))
+        seen, out = set(), []
+        for _ in range(100 * n):
+            if len(out) == n:
+                break
+            f = self.base._formula()
+            if f in seen:
+                continue
+            seen.add(f)
+            out.append({"name": f"template_{len(out) + 1:03d}", "mode": "new", "parent": "", "role": "",
+                        "formula": f, "meaning": "template formula (no LLM)"})
+        return {"reflection": "template formulas (no LLM)", "lessons": [], "factors": out}
+
+
+class NoiseBatchProposer:
+    """Random-number check for batch mode: n factors of pure random numbers (formula noise(<seed>))."""
+
+    def __init__(self, seed=0):
+        self.seed = seed
+
+    def __call__(self, prompt):
+        n = int(re.match(r"BATCH OF (\d+)", prompt).group(1))
+        out = [{"name": f"noise_{self.seed}_{i:03d}", "mode": "new", "parent": "", "role": "",
+                "formula": f"noise({self.seed * 1000 + i})", "meaning": "pure random numbers"} for i in range(n)]
+        return {"reflection": "random numbers (no LLM)", "lessons": [], "factors": out}
 
 
 class ReplayProposer:
