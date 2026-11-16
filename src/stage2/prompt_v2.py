@@ -271,3 +271,93 @@ WHAT EARLIER SEARCHES TAUGHT US (use it)
    tomorrow more likely, higher_means_down otherwise. After the search each factor's direction is checked in
    every year; a factor whose direction flips between years is not trusted.
 """
+
+
+# ---------------- direction test (16 Nov): is the story right about which way the factor points? ----------------
+# Round 1: the LLM proposes factors and states each one's direction in advance, with no results at all.
+# Round 2: it sees how the round-1 directions turned out on the search days (never the sealed Q4 days) and
+# proposes new factors, again with directions. See src/stage2/direction.py and experiments/run_direction_test.py.
+
+TOOL_DIRECTION = copy.deepcopy(TOOL_BATCH)
+_item = TOOL_DIRECTION["input_schema"]["properties"]["factors"]["items"]
+_item["properties"]["expected_sign"] = {
+    "type": "string", "enum": ["higher_means_up", "higher_means_down"],
+    "description": "your prediction, stated in advance: does a HIGHER value of the factor make an up day "
+                   "tomorrow MORE likely (higher_means_up) or LESS likely (higher_means_down)?"}
+_item["required"] = _item["required"] + ["expected_sign"]
+TOOL_DIRECTION["input_schema"]["properties"]["lesson"] = {
+    "type": "string", "description": "round 2 only: two or three sentences on what the direction evidence taught you"}
+
+SYSTEM_DIRECTION = """You are a quantitative researcher designing interpretable daily factors for a stock-prediction study.
+Every factor must have a clear economic or behavioural meaning that a finance student could understand in
+five minutes, and that meaning must commit to a direction: whether a higher value makes an up day tomorrow
+more likely or less likely. Your stated directions will be checked against the data.
+Never use future information. Write formulas only with the operators and inputs listed."""
+
+
+def build_prompt_direction(*, n, base_formulas, stage1_top, market, evidence=""):
+    base = "\n".join(f"- {k} = {v}" for k, v in base_formulas.items())
+    roles = "\n".join(f"- {k}: {v}" for k, v in ROLES.items())
+    round_no = 2 if evidence else 1
+    new_rule = ("3. New ideas only: do not resubmit or lightly reword a round-1 factor, and nothing that copies one of the\n"
+                "   22 existing factors. Use what the direction evidence taught you about how this stock behaves."
+                if evidence else
+                "3. No repeats: nothing that copies one of the 22 existing factors or another factor in the batch.")
+    return f"""DIRECTION TEST, ROUND {round_no}: BATCH OF {n}
+
+GOAL
+Predict whether AAPL closes higher tomorrow than today (binary). A factor is computed after the close of day t.
+
+DATA (daily, adjusted OHLCV, Sept 2021 - Dec 2025)
+Inputs: {", ".join(INPUTS)}
+Market summary up to 30 June 2025:
+{market}
+
+HOW YOUR FACTORS ARE CHECKED
+For every factor you state in advance whether a higher value makes an up day tomorrow more likely
+(higher_means_up) or less likely (higher_means_down). The data then shows which way the factor really points:
+its values are compared on the days before an up day and before a down day, inside each year 2022-2025.
+Guessing gives 50% right. No model is trained and nothing is selected, so only the quality of your reasoning counts.
+{evidence}
+THE 22 EXISTING FACTORS (do not repeat them)
+{base}
+
+MOST USEFUL EXISTING FACTORS IN STAGE 1
+{stage1_top}
+
+FACTOR ROLES (label every factor with one)
+{roles}
+
+FORMULA LANGUAGE
+Nested function calls only, no + - * / symbols. Windows n must be one of {WINDOWS}.
+{operator_guide()}
+Example: safe_divide(rolling_std(pct_change(AAPL_Close, 1), 5), rolling_std(pct_change(QQQ_Close, 1), 20))
+
+TASK
+Propose exactly {n} factors in one answer.
+1. Interpretable first: every factor needs a clear meaning that makes sense to a finance student in 5 minutes,
+   written in the "meaning" field, and the formula must match that meaning. Keep formulas short: at most
+   about four operators. The meaning must explain WHY the factor points the way you state in expected_sign.
+2. Spread the batch: about a quarter of the factors for each of the four roles, and many different ideas
+   (trend, reversal, volatility, intraday range and close position, gaps, volume, peers leading Apple,
+   Apple against the market).
+{new_rule}
+Answer ONLY by calling the tool propose_factors (no other text)."""
+
+
+def direction_evidence(rows: list, n_right: int) -> str:
+    """Round-2 text: how the round-1 directions turned out on the search days (Q4 is never shown)."""
+    lines = [f"- {r['name']} = {r['formula']} | you said {r['expected_sign']} | data: "
+             f"{'higher_means_up' if r['edge_search'] > 0 else 'higher_means_down'} "
+             f"(edge {r['edge_search']:+.3f}, this direction in {r['years_same']} of 4 years) | "
+             f"{'RIGHT' if r['right'] else 'WRONG'}" for r in rows]
+    return f"""
+DIRECTION EVIDENCE FROM ROUND 1
+Measured on January-September of 2022, 2023, 2024 and 2025 only. The October-December quarters are sealed:
+your round-2 directions will be checked on them, and you never see them.
+"edge" = ROC AUC of the factor against tomorrow's direction, minus 0.5 (positive: higher values went with up
+days). With about 740 days an edge within about +/-0.04 can be chance, so trust directions that hold in 3 or 4
+of the 4 years and patterns shared by many factors more than any single small edge.
+Your stated direction was right for {n_right} of {len(rows)} factors (guessing gives {len(rows) // 2}).
+{chr(10).join(lines)}
+"""
