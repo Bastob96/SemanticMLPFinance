@@ -24,7 +24,12 @@ def _position(p: float) -> float:
 def _hero(ctx: Context, call) -> str:
     when = f"{call.next_day:%A %d %B %Y}"
     replay = "" if ctx.latest else T.chip("Replay", "blue")
-    stale = ctx.latest and call.next_day.date() < last_complete_day()      # e.g. the saved file, which ends in August 2026
+    # the day being called has already finished in New York: either the source has not published it yet
+    # (Yahoo often lists a new day with empty prices for some hours), or the prices are simply old
+    behind = (last_complete_day() - call.next_day.date()).days if ctx.latest else -1
+    waiting, stale = 0 <= behind <= 3, behind > 3
+    if waiting:
+        replay = T.chip(f"Waiting for {call.next_day:%a %d %b} prices: not published yet")
     if stale:
         replay = T.chip(f"Prices end {call.day:%d %b %Y}: not a current call", "down")
     head = f'<div class="fl-eyebrow">AAPL · call for {when} {replay}</div>'
@@ -57,7 +62,10 @@ def _hero(ctx: Context, call) -> str:
         body += T.chip(f"What happened: AAPL closed {'up' if went_up else 'down'} {T.signed_pct(call.next_return)}", "up" if went_up else "down")
         body += T.chip("Call was right ✓" if right else "Call was wrong ✗")
     body += "</div>"
-    if ctx.latest and not stale:
+    if waiting:
+        body += (f'<div class="fl-note" style="margin-top:0.6rem">The {call.next_day:%a %d %b} session has ended, but the price source '
+                 'has not published its final prices yet. Press Refresh prices later to score this call and see the next one.</div>')
+    elif ctx.latest and not stale:
         body += ('<div class="fl-note" style="margin-top:0.6rem">The next call appears once the New York session of '
                  f'{call.next_day:%a %d %b} has closed (press Refresh prices).</div>')
     return f'<div class="fl-card">{head}{body}</div>'

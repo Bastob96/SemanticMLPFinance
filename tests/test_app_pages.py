@@ -102,3 +102,17 @@ def test_falls_back_to_the_saved_file_when_live_prices_fail(monkeypatch):
         assert len(at.sidebar.warning) == 1 and "saved price file" in at.sidebar.warning[0].value
     finally:
         state.lab_for.clear()
+
+
+def test_today_says_when_the_latest_day_is_not_published_yet(monkeypatch):
+    """Yahoo can list a finished day with empty prices; the app must say it is waiting, not promise a future call."""
+    import datetime as dt
+
+    from src.app.engine import load_snapshot
+    from src.app.views import today
+
+    last = load_snapshot()["Date"].max().date()
+    for days_later, expected in ((1, "Waiting for"), (2, "Waiting for"), (60, "not a current call"), (0, "The next call appears")):
+        monkeypatch.setattr(today, "last_complete_day", lambda d=days_later: last + dt.timedelta(days=d))
+        at = _page("today", {})
+        assert expected in " ".join(m.value for m in at.markdown), (days_later, expected)
