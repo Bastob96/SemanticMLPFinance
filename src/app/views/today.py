@@ -205,7 +205,7 @@ def _recent(ctx: Context) -> None:
         "Close of": rows.index.strftime("%a %d %b %Y"),
         "Call": ["▲ UP" if v == "UP" else "▼ DOWN" for v in rows["lean"]],
         "Chance of up": [T.pct(v) for v in rows["p_up"]],
-        "Against a usual day": [("same" if round(v * 100) == 0 else f"{round(v * 100):+d} points") if v == v else "n/a" for v in rows["tilt"]],
+        "Against a usual day": [("same" if round(v * 100) == 0 else f"{round(v * 100):+d} point{'s' if abs(round(v * 100)) != 1 else ''}") if v == v else "n/a" for v in rows["tilt"]],
         "AAPL next day": [T.signed_pct(v) if v == v else "not known yet" for v in rows["next_return"]],
         "Result": ["✓ right" if v == 1 else "✗ wrong" if v == 0 else "" for v in rows["hit"]]})
     st.dataframe(table, hide_index=True, width="stretch")

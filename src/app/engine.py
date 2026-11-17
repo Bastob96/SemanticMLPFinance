@@ -54,12 +54,12 @@ ROLE_LABEL = {"apple_own": "Apple's own behaviour", "market_condition": "Market 
               "template": "Template formulas"}
 
 POOLS = {
-    "llm_blind": "LLM factors proposed blind, 3 models",
-    "llm_feedback": "LLM factors proposed after feedback, 3 models",
+    "llm_blind": "LLM factors, blind round",
+    "llm_feedback": "LLM factors, after feedback",
     "llm_all": "All LLM factors",
     "opus": "Opus 5.5 factors", "fable": "Fable 5.2 factors", "haiku": "Haiku 5.5 factors",
     "base": "The 22 existing factors",
-    "kept": "The 4 factors kept by the iterative search",
+    "kept": "4 kept by iterative search",
     "templates": "Template formulas (no LLM)",
 }
 NOT_LLM_BATCH = ("Existing 22", "Templates (no LLM)", "Iterative search (kept)")

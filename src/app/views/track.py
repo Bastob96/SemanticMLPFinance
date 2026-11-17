@@ -122,11 +122,13 @@ def render(ctx: Context) -> None:
         st.info("Too few scored days in this period.")
         return
 
-    above = f"{T.pct(score['up_above'])} of {score['days_above']}" if score["days_above"] else "none"
-    below = f"{T.pct(score['up_below'])} of {score['days_below']}" if score["days_below"] else "none"
+    def after(stance: str) -> str:
+        n = score[f"days_{stance}"]
+        return f"{T.pct(score[f'up_{stance}'])} up on {n} day{'s' if n != 1 else ''}" if n else "no such calls"
     T.tiles([("Days scored", f"{score['days']}", f"AAPL closed up on {T.pct(score['always_up'])}"),
              ("Ranking skill (AUC)", f"{score['auc']:.3f}", f"0.50 is none · luck reaches this {score['p']:.1%} of the time"),
-             ("After 'above usual' calls", f"{above.split(' of ')[0]} up", f"{score['days_above']} days · after 'below usual' calls: {below} days"),
+             ("After 'above usual' calls", T.pct(score["up_above"]) + " up" if score["days_above"] else "none made",
+              f"{after('above')} · after 'below usual' calls: {after('below')}"),
              ("UP / DOWN call right", T.pct(score["hit_rate"]), f"always saying UP: {T.pct(score['always_up'])}")])
     st.write("")
     T.verdict(_verdict(score, period))

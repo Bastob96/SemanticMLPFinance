@@ -111,10 +111,11 @@ def render(ctx: Context) -> None:
         st.info("No factor matches these filters.")
         return
 
-    judged = view[view["match"] != ""]
+    # only blind-round directions are a fair test: after feedback the LLM had seen data from the same years
+    judged = view[(view["match"] != "") & (view["round"] == 1)]
     share = (judged["match"] == "✓").mean() if len(judged) else float("nan")
     T.tiles([("Factors shown", f"{len(view)}", f"{view['key'].nunique()} different formulas"),
-             ("LLM direction confirmed by data", T.pct(share), f"of {len(judged)} factors with a stated direction · guessing gives 50%"),
+             ("LLM's blind guess of direction right", T.pct(share), f"of {len(judged)} blind-round factors shown · guessing gives 50%"),
              ("Strongest single factor", f"{view['edge'].abs().max() * 100:.1f} points", "AUC points above 50, on 2022 to 2025")])
     st.write("")
 

@@ -70,7 +70,7 @@ def render(ctx: Context) -> None:
     lab = ctx.lab
     st.markdown(
         f"- **Prices:** daily open, high, low, close and volume from Yahoo Finance (adjusted), {lab.index[0]:%d %b %Y} to {lab.index[-1]:%d %b %Y}; "
-        f"currently using the {lab.source}.\n"
+        f"currently using {'live prices from Yahoo Finance' if 'live' in lab.source else 'the saved price file'}.\n"
         f"- **Factors:** {len(lab.cat)} in the catalogue ({lab.cat['key'].nunique()} different formulas): the 22 existing factors, "
         "the 4 factors kept by the iterative search, the LLM factors of the direction test, and the template control.\n"
         "- **Classifiers shown as second opinions:** logistic regression and random forest (scikit-learn) on the 22 existing factors, "
