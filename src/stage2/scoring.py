@@ -11,6 +11,8 @@ Reported per candidate and year:
   bal_acc_gain  same for balanced accuracy
   importance    permutation importance of the candidate (drop in validation AUC)
   helped        auc_gain > 0
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

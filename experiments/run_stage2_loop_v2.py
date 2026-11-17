@@ -10,6 +10,10 @@ Ablations (Liu, 22 Oct):
     python experiments/run_stage2_loop_v2.py --rounds 8 --no-feedback          # Claude sees no results
     python experiments/run_stage2_loop_v2.py --rounds 8 --model claude-haiku-5-5   # a smaller Claude model
     python experiments/run_stage2_loop_v2.py --proposer replay --replay <run> --no-pairs   # pair trials off
+Batch mode (Liu, 12 Nov): 100 factors in one call, each with a plain-English meaning, then the same search:
+    python experiments/run_stage2_loop_v2.py --batch 100                      # Claude (needs the API key)
+    python experiments/run_stage2_loop_v2.py --batch 100 --proposer template --seed 0   # no LLM
+    python experiments/run_stage2_loop_v2.py --batch 100 --proposer noise --seed 0      # random numbers
 Continue a stopped run:
     python experiments/run_stage2_loop_v2.py --rounds 8 --out results/stage2/runs_v2/<run> --resume
 """
@@ -31,8 +35,9 @@ sys.path.insert(0, str(ROOT))
 from src.features import build_stage1_features  # noqa: E402
 from src.stage2.formula import wide_prices  # noqa: E402
 from src.stage2.llm import ClaudeProposer  # noqa: E402
-from src.stage2.loop_v2 import LoopV2, ReplayProposer, TemplateProposerV2  # noqa: E402
-from src.stage2.prompt_v2 import SYSTEM_V2, TOOL_V2  # noqa: E402
+from src.stage2.loop_v2 import (LoopV2, NoiseBatchProposer, ReplayProposer, TemplateBatchProposer,  # noqa: E402
+                                TemplateProposerV2)
+from src.stage2.prompt_v2 import SYSTEM_BATCH, SYSTEM_V2, TOOL_BATCH, TOOL_V2, TOOL_V2_INFORMED  # noqa: E402
 from src.stage2.selection import Rules  # noqa: E402
 
 warnings.filterwarnings("ignore")
@@ -46,7 +51,7 @@ if __name__ == "__main__":
     ap.add_argument("--improve", type=int, default=2)
     ap.add_argument("--new", type=int, default=2)
     ap.add_argument("--partner", type=int, default=2)
-    ap.add_argument("--proposer", choices=["claude", "template", "replay"], default="claude")
+    ap.add_argument("--proposer", choices=["claude", "template", "replay", "noise"], default="claude")
     ap.add_argument("--replay", type=Path, help="run folder whose factors are replayed (--proposer replay)")
     ap.add_argument("--model", default="claude-sonnet-5-5")
     ap.add_argument("--seed", type=int, default=0, help="template proposer only")
@@ -57,13 +62,29 @@ if __name__ == "__main__":
     ap.add_argument("--rules", type=Path, default=RULES_FILE, help="bars to use (default results/stage2/rules_v2.json)")
     ap.add_argument("--no-feedback", action="store_true", help="ablation: Claude sees only the formulas already tried, no results")
     ap.add_argument("--no-pairs", action="store_true", help="ablation: switch the pair trials off")
+    ap.add_argument("--batch", type=int, default=0,
+                    help="batch mode (Liu, 12 Nov): this many factors in one call, then one search (sets --rounds 1)")
+    ap.add_argument("--informed", action="store_true",
+                    help="informed mode (16 Nov): the lessons of earlier searches, and every factor's direction stated in advance")
+    ap.add_argument("--jobs", type=int, default=0,
+                    help="parallel processes for testing factors (0 = all cores in batch mode, 1 otherwise); same results")
     args = ap.parse_args()
+    if args.proposer == "noise" and not args.batch:
+        ap.error("--proposer noise needs --batch")
+    if args.batch:
+        args.rounds = 1
 
-    if args.proposer == "claude":
-        proposer = ClaudeProposer(args.model, tool=TOOL_V2, system=SYSTEM_V2)
+    if args.proposer == "claude" and args.batch:
+        proposer = ClaudeProposer(args.model, max_tokens=32000, tool=TOOL_BATCH, system=SYSTEM_BATCH)
+    elif args.proposer == "claude":
+        proposer = ClaudeProposer(args.model, tool=TOOL_V2_INFORMED if args.informed else TOOL_V2, system=SYSTEM_V2)
     elif args.proposer == "replay":
         proposer = ReplayProposer(args.replay)
         args.rounds = len(list(Path(args.replay).glob("round_*_response.json")))
+    elif args.proposer == "noise":
+        proposer = NoiseBatchProposer(args.seed)
+    elif args.batch:
+        proposer = TemplateBatchProposer(args.seed)
     else:
         proposer = TemplateProposerV2(args.seed, args.improve, args.new, args.partner)
     rules_file = args.rules
@@ -72,6 +93,8 @@ if __name__ == "__main__":
 
     tag = args.proposer if args.proposer != "replay" else f"replay_{Path(args.replay).name}"
     tag += ("_nofeedback" if args.no_feedback else "") + ("_nopairs" if args.no_pairs else "")
+    tag += "_informed" if args.informed else ""
+    tag += f"_batch{args.batch}" + (f"_seed{args.seed}" if args.proposer in ("template", "noise") else "") if args.batch else ""
     if args.proposer == "claude" and args.model != "claude-sonnet-5-5":
         tag += "_" + args.model.replace("claude-", "")
     out = args.out or ROOT / "results/stage2/runs_v2" / f"{datetime.now():%Y%m%d_%H%M}_{tag}"
@@ -79,7 +102,9 @@ if __name__ == "__main__":
     loop = LoopV2(proposer=proposer, features=build_stage1_features(raw), prices=wide_prices(raw),
                   out_dir=out, stage1_importance_path=IMPORTANCE, rules=rules,
                   n_improve=args.improve, n_new=args.new, n_partner=args.partner,
-                  feedback=not args.no_feedback, pairs_on=not args.no_pairs)
+                  feedback=not args.no_feedback, pairs_on=not args.no_pairs,
+                  batch=args.batch, allow_noise=args.proposer == "noise",
+                  n_jobs=args.jobs or (-1 if args.batch else 1), informed=args.informed)
 
     start = 1
     if args.resume and (out / "scoreboard.csv").exists():

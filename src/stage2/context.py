@@ -4,6 +4,8 @@ which of them mattered in Stage 1, and a short description of the market data.
 Market statistics are computed only up to 30 June 2025 (the end of the last
 training period), so nothing from any Q3 validation or Q4 test quarter of 2025
 is described to the LLM.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

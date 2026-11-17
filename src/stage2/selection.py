@@ -8,6 +8,8 @@ Plain-language summary:
     Both join the team if together they do clearly better than their two gains added up, consistently
     (two lucky factors only add up their luck; real teamwork gives more than the sum).
   - Promising list: factors that are weak alone but show some sign of life are not thrown away.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

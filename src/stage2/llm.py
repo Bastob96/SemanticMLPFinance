@@ -1,4 +1,7 @@
-"""Ask an LLM for new factors. The prompt carries the context and the scoreboard so far."""
+"""Ask an LLM for new factors. The prompt carries the context and the scoreboard so far.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
+"""
 
 from __future__ import annotations
 
@@ -103,11 +106,15 @@ class ClaudeProposer:
     def __call__(self, prompt: str) -> dict:
         # tool_choice "auto": newer models do not allow forcing a specific tool;
         # the prompt asks for the tool call, and plain-JSON text is accepted as a fallback.
-        msg = self.client.messages.create(
-            model=self.model, max_tokens=self.max_tokens,
-            system=self.system, tools=[self.tool], tool_choice={"type": "auto"},
-            messages=[{"role": "user", "content": prompt}],
-        )
+        args = dict(model=self.model, max_tokens=self.max_tokens,
+                    system=self.system, tools=[self.tool], tool_choice={"type": "auto"},
+                    messages=[{"role": "user", "content": prompt}])
+        if self.max_tokens > 16000:
+            # a long answer (batch mode: 100 factors in one reply) must be streamed, or the API refuses it
+            with self.client.messages.stream(**args) as stream:
+                msg = stream.get_final_message()
+        else:
+            msg = self.client.messages.create(**args)
         block = next((b for b in msg.content if getattr(b, "type", "") == "tool_use"), None)
         if block is not None:
             out = dict(block.input)
