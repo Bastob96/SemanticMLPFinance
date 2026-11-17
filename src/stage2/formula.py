@@ -6,6 +6,8 @@ The LLM writes a factor as nested function calls, for example
 Every operator only looks backwards in time (rolling windows end at day t,
 lags are positive), so any formula that passes ``validate`` can only use
 information available at the close of day t.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

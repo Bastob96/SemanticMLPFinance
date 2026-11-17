@@ -1,4 +1,7 @@
-"""Ask an LLM for new factors. The prompt carries the context and the scoreboard so far."""
+"""Ask an LLM for new factors. The prompt carries the context and the scoreboard so far.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
+"""
 
 from __future__ import annotations
 

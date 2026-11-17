@@ -5,6 +5,8 @@ using machine learning and LLMs.
 
 ## Factor Lab: live call from LLM-proposed factors
 
+Built by **Abu Wakkas Bastob**, who also designed and ran the Stage 2 LLM factor search (`src/stage2/`), the direction test and the checks behind it. Live app: https://llm-factor-lab.streamlit.app
+
 `app.py` is the interface for the Stage 2 result: a live next-day call for AAPL built from factors that LLMs
 proposed in plain formulas, the reasons behind each call, its full track record against the alternatives
 (the 22 existing factors, template formulas, random numbers, the two classifiers), a browser for every factor,

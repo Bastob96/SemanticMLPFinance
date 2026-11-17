@@ -12,6 +12,8 @@ Everything shown for a day t is computed from information available at the close
 
 So the value shown for any past date is exactly what the app would have shown on that date (tests check
 this by cutting the future off the data), and "replay" needs no special code path.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

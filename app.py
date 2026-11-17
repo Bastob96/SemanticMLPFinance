@@ -3,6 +3,8 @@
 Run:   streamlit run app.py
 Pages: Today (the call and why), Track record, Factors, Research findings, Try a formula, How it works.
 The code is in src/app/ (engine.py holds every calculation and is covered by tests/test_app_*.py).
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

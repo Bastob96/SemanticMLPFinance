@@ -1,4 +1,7 @@
-"""Track record: every past call scored against what happened, next to the alternatives."""
+"""Track record: every past call scored against what happened, next to the alternatives.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
+"""
 
 from __future__ import annotations
 

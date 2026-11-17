@@ -1,4 +1,7 @@
-"""Integrate quarterly LLM factors with Stage 1 features without data leakage."""
+"""Integrate quarterly LLM factors with Stage 1 features without data leakage.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
+"""
 
 from __future__ import annotations
 

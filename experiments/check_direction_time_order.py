@@ -21,6 +21,8 @@ this project has used them. Directions are measured on 2022-2025 only and the si
 
 Usage:  python experiments/check_direction_time_order.py
 Writes results/stage2/direction/time_order.csv and time_order_by_year.csv
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

@@ -7,6 +7,8 @@
 
 Usage: python experiments/analyse_directions.py
 Writes results/stage2/direction/existing_runs_persistence.csv, existing_runs_stated.csv and all_candidates.csv.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

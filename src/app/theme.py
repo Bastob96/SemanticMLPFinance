@@ -1,4 +1,7 @@
-"""Look of the Factor Lab app: colours, page styles, chart defaults and small HTML building blocks."""
+"""Look of the Factor Lab app: colours, page styles, chart defaults and small HTML building blocks.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
+"""
 
 from __future__ import annotations
 

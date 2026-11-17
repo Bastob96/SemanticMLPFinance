@@ -16,6 +16,8 @@ Usage (ANTHROPIC_API_KEY set; about US$0.40 with Sonnet, US$0.02 with Haiku, US$
     python experiments/run_direction_test.py --model claude-sonnet-5-5
     python experiments/run_direction_test.py --proposer template     # no LLM: template formulas, coin-flip directions
 Writes results/stage2/direction/<model>/: factors.csv, summary.csv, prompts and replies.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

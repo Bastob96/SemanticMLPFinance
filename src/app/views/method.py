@@ -1,4 +1,7 @@
-"""How it works: the pipeline, the guarantees and the limits, in plain language."""
+"""How it works: the pipeline, the guarantees and the limits, in plain language.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
+"""
 
 from __future__ import annotations
 

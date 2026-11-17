@@ -10,6 +10,8 @@ A fixed "class" of template formulas (no LLM, made by RandomProposer with a fixe
 way as each factor, on top of the same team. A factor's curved gain in a year = its gain minus the median
 gain of the class in that year (for the average, for Logistic Regression and for Random Forest separately).
 The class is chosen before any real run and never changes.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

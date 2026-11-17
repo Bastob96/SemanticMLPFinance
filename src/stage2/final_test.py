@@ -5,6 +5,8 @@ the kept LLM factors, predict Q4, and compare balanced accuracy, ROC AUC and a
 long/flat backtest (src.backtesting.simulate_long_flat) against buy-and-hold.
 Random Forest predictions are the average probability of seeds 0, 1 and 2. The forest considers 4 inputs at
 each split for every factor set (see RF_MAX_FEATURES in scoring.py), so only the factors differ.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

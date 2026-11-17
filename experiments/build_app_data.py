@@ -8,6 +8,8 @@ Sources: results/stage2/direction/<model>/ (experiments/run_direction_test.py) a
 results/stage2/direction/time_order.csv, fresh_2026.csv (experiments/check_direction_time_order.py).
 
 Usage:  python experiments/build_app_data.py
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

@@ -12,6 +12,8 @@ are answered for a selected factor set:
                             times. p = the share of random sets whose pooled gain is at least as large.
 
 Nothing here selects anything: the factor sets were chosen on Q3 before, and Q4 is only measured.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

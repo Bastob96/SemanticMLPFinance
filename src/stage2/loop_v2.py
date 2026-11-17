@@ -25,6 +25,8 @@ allow_noise=True), for the random-number check of batch mode.
 finalize() gives the promising list one more team trial at the end. It is off by default in
 experiments/run_stage2_loop_v2.py because the random-number check showed it lets luck in (1 in 18).
 The Q4 test quarters are never used here.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

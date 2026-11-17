@@ -1,4 +1,7 @@
-"""Today: the call for the next trading day, and the reasons behind it."""
+"""Today: the call for the next trading day, and the reasons behind it.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
+"""
 
 from __future__ import annotations
 

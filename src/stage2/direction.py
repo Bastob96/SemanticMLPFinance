@@ -14,6 +14,8 @@ model is trained: this test does not depend on the 22-factor model, on scikit-le
                 factors and tomorrow but keeps the factors (and how similar they are to each other) as they are.
     persistence correlation, across factors, between the edge on the search days (Q1-Q3) and the edge on the
                 sealed Q4 days: does a direction seen in the data carry over to days the search never used?
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

@@ -9,6 +9,8 @@ Differences from version 1 (llm.build_prompt):
   - Claude labels each factor's role, so complementary pairs can be found
     (for example a market-condition factor with an Apple-relative factor).
   - Claude writes a one-line lesson for every factor from the previous round.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

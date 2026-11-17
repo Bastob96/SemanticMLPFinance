@@ -12,6 +12,8 @@ For each factor:
 
 Everything here only formats numbers that were already measured on the
 validation quarters (Q3). Nothing from the Q4 test quarters is ever shown.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

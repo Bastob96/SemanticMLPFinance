@@ -1,4 +1,7 @@
-"""Research findings: what the project learned, in five charts. Numbers come from the saved research runs."""
+"""Research findings: what the project learned, in five charts. Numbers come from the saved research runs.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
+"""
 
 from __future__ import annotations
 

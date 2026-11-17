@@ -1,4 +1,7 @@
-"""Try a formula: write a factor in the project's formula language and test it the same way."""
+"""Try a formula: write a factor in the project's formula language and test it the same way.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
+"""
 
 from __future__ import annotations
 

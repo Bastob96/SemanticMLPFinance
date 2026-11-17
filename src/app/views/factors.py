@@ -1,4 +1,7 @@
-"""Factors: browse every factor, read what it means, and see whether the data agrees with the LLM."""
+"""Factors: browse every factor, read what it means, and see whether the data agrees with the LLM.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
+"""
 
 from __future__ import annotations
 

@@ -13,6 +13,8 @@ factors got through the old bars in 3 runs. This is the winner's curse (multiple
     same_factor(...)  two kept factors count as the same idea if their formulas are equal or their values
                       are almost identical (|Spearman correlation| >= 0.9 on the Q1-Q3 days).
 Nothing here uses the Q4 test quarters.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

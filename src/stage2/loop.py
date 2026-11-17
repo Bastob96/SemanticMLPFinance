@@ -9,6 +9,8 @@ Every round:
      (|Spearman| < 0.9) of an existing or already kept factor.
   5. Results (including errors) go on the scoreboard, which the next prompt includes.
 Q4 test quarters are never used inside the loop.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations

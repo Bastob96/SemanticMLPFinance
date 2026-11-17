@@ -1,4 +1,7 @@
-"""What every page shares: the Lab for the chosen price source, the sidebar choices, and cached results."""
+"""What every page shares: the Lab for the chosen price source, the sidebar choices, and cached results.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
+"""
 
 from __future__ import annotations
 
@@ -124,6 +127,8 @@ def sidebar() -> Context:
                                    "Measured: taken from earlier days only, re-measured each quarter. "
                                    "As the LLM stated: the direction the LLM wrote down before seeing any data.")
         st.divider()
+        st.caption("Built by **Abu Wakkas Bastob**: Stage 2 LLM factor search, direction test and this app. "
+                   "Capstone PG-S2-36, supervised by A/Prof Lingqiao Liu.")
         st.caption("Research demo. Not financial advice.")
     return Context(lab, note, day, latest, pool, stated, members_of(lab, pool), calls_for(lab, pool, stated))
 

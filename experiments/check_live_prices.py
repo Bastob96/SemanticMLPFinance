@@ -9,6 +9,8 @@ It does exactly what the app does in "Live" mode (src.app.engine.fetch_live), th
 
 Usage:  python experiments/check_live_prices.py
 Prints PASS or FAIL for each check and "ALL CHECKS PASSED" at the end when everything is fine.
+
+Author: Abu Wakkas Bastob (capstone PG-S2-36, supervised by A/Prof Lingqiao Liu).
 """
 
 from __future__ import annotations
