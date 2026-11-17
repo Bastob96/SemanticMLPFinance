@@ -187,3 +187,19 @@ def test_calendar():
     assert next_trading_day(pd.Timestamp("2026-11-13")) == pd.Timestamp("2026-11-16")      # Friday -> Monday
     assert next_trading_day(pd.Timestamp("2026-11-25")) == pd.Timestamp("2026-11-27")      # Thanksgiving skipped
     assert next_trading_day(pd.Timestamp("2026-12-24")) == pd.Timestamp("2026-12-28")      # Christmas + weekend
+
+
+def test_live_price_check_script_passes_on_good_data_and_fails_on_bad(raw, capsys):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("check_live_prices", engine.ROOT / "experiments/check_live_prices.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    last = raw["Date"].max()
+    now = datetime(last.year, last.month, last.day, 18, 0, tzinfo=NY)
+    assert module.main(downloader=lambda: _fake_download(raw), now=now) is True
+    assert "ALL CHECKS PASSED" in capsys.readouterr().out
+    shifted = raw.copy()                                   # prices that disagree with the saved file must be caught
+    shifted.loc[shifted["Ticker"] == "AAPL", "Close"] *= np.random.default_rng(0).normal(1, 0.02, (shifted["Ticker"] == "AAPL").sum())
+    assert module.main(downloader=lambda: _fake_download(shifted), now=now) is False
+    assert module.main(downloader=lambda: pd.DataFrame(), now=now) is False
