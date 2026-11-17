@@ -13,6 +13,9 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+Tested with Streamlit 1.51 and 1.67 (Python 3.13). If you already have the project's packages, only `yfinance` may
+be missing: `pip install yfinance`.
+
 The app opens at http://localhost:8501. With internet it downloads daily prices from Yahoo Finance.
 Without internet (or if Yahoo is unavailable) it uses the saved price file and says so in the sidebar.
 

@@ -146,6 +146,19 @@ def test_live_download_is_tidied_and_unfinished_days_are_dropped(raw):
     pd.testing.assert_frame_equal(a, b)
 
 
+def test_both_yfinance_column_layouts_and_time_zones_are_read(raw):
+    by_ticker = _fake_download(raw)                                   # columns (ticker, field)
+    by_field = by_ticker.swaplevel(axis=1).sort_index(axis=1)         # columns (field, ticker), yfinance's default
+    by_field.columns.names = ["Price", "Ticker"]
+    zoned = by_ticker.copy()
+    zoned.index = zoned.index.tz_localize("America/New_York")
+    late = datetime(2030, 1, 1, tzinfo=NY)
+    a = fetch_live(now=late, downloader=lambda: by_ticker)
+    for other in (by_field, zoned):
+        pd.testing.assert_frame_equal(a, fetch_live(now=late, downloader=lambda: other))
+    assert a["Date"].max() == raw["Date"].max() and str(a["Date"].dtype).startswith("datetime64")
+
+
 def test_days_missing_a_ticker_are_dropped(raw):
     last = raw["Date"].max()
     holey = raw[~((raw["Ticker"] == "NVDA") & (raw["Date"] == last))]

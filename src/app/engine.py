@@ -81,15 +81,25 @@ def last_complete_day(now: datetime | None = None) -> date:
 
 
 def tidy_download(frame: pd.DataFrame) -> pd.DataFrame:
-    """yfinance's wide download (columns ticker x field) -> the project's long table; days missing any ticker are dropped."""
+    """yfinance's wide download -> the project's long table. Days missing any ticker or any value are dropped.
+
+    Works for both column layouts yfinance can return: (ticker, field) and (field, ticker)."""
+    if frame is None or len(frame) == 0 or not isinstance(frame.columns, pd.MultiIndex):
+        raise ValueError("the download returned no usable price table")
+    level = next((i for i in range(frame.columns.nlevels) if set(TICKERS) <= set(frame.columns.get_level_values(i))), None)
+    if level is None:
+        raise ValueError("prices are missing one of AAPL, QQQ, MSFT, NVDA")
+    days = pd.to_datetime(frame.index)
+    days = (days.tz_localize(None) if days.tz is not None else days).normalize()
     parts = []
     for ticker in TICKERS:
-        t = frame[ticker][["Open", "High", "Low", "Close", "Volume"]].copy()
+        t = frame.xs(ticker, axis=1, level=level)[["Open", "High", "Low", "Close", "Volume"]].copy()
+        t.columns.name = None
+        t.insert(0, "Date", days)
         t.insert(0, "Ticker", ticker)
-        parts.append(t.rename_axis("Date").reset_index())
-    raw = pd.concat(parts, ignore_index=True)
-    raw["Date"] = pd.to_datetime(raw["Date"]).dt.tz_localize(None).dt.normalize()
-    raw = raw.dropna(subset=["Open", "High", "Low", "Close", "Volume"])
+        parts.append(t.reset_index(drop=True))
+    raw = pd.concat(parts, ignore_index=True).dropna(subset=["Open", "High", "Low", "Close", "Volume"])
+    raw = raw.drop_duplicates(["Ticker", "Date"], keep="last")
     complete = raw.groupby("Date")["Ticker"].nunique()
     return raw[raw["Date"].isin(complete[complete == len(TICKERS)].index)].sort_values(["Ticker", "Date"]).reset_index(drop=True)
 

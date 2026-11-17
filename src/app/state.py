@@ -21,8 +21,11 @@ def lab_for(mode: str) -> tuple:
             check_prices(raw, at_least_until=load_snapshot()["Date"].max())
             return Lab(raw, source="Yahoo Finance, live"), ""
         except Exception as exc:  # no network, Yahoo unavailable, bad data: the app must still work
-            note = ("Live prices are not reachable right now, so the saved price file is shown. "
-                    f"Check the internet connection and press Refresh prices. ({type(exc).__name__})")
+            if isinstance(exc, ImportError):
+                note = "Live prices need the yfinance package (run: pip install yfinance). Showing the saved price file."
+            else:
+                note = ("Live prices are not reachable right now, so the saved price file is shown. "
+                        f"Check the internet connection and press Refresh prices. ({type(exc).__name__})")
             return Lab(load_snapshot(), source="saved price file"), note
     return Lab(load_snapshot(), source="saved price file"), ""
 

@@ -84,7 +84,7 @@ def test_live_prices_add_a_live_period_and_a_current_call(monkeypatch):
         at.sidebar.radio[0].set_value("live").run()
         assert not at.exception and not any("Replay" in c.value for c in at.sidebar.caption)   # ...and stays on the newest day
         at = _page("track", {"mode": "live"})
-        assert any(option.startswith("Live (since") for option in at.button_group[0].options)
+        assert any("Live (since" in str(getattr(option, "content", option)) for option in at.button_group[0].options)
     finally:
         state.lab_for.clear()
 
