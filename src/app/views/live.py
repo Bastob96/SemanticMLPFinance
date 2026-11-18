@@ -46,8 +46,22 @@ def _preview(ctx: Context, day: pd.Timestamp) -> Preview:
     return memo(ctx.lab, ("preview", ctx.pool, day), lambda: Preview(ctx.lab, ctx.members, day))
 
 
+def _official_bar(ctx: Context, day: pd.Timestamp) -> dict | None:
+    """The finished day's official daily prices (Yahoo's 5-minute bars can differ slightly from the official close)."""
+    return {c: ctx.lab.prices.loc[day, c] for c in ctx.lab.prices.columns} if day in ctx.lab.index else None
+
+
 def _path(ctx: Context, day: pd.Timestamp, session: pd.DataFrame, tag: str) -> pd.DataFrame:
-    return memo(ctx.lab, ("path", ctx.pool, day, tag), lambda: _preview(ctx, day).path(session))
+    def build():
+        preview = _preview(ctx, day)
+        path = preview.path(session)
+        final = _official_bar(ctx, day)
+        if final is not None:                       # at 16:00 the official close replaces the last 5-minute bar
+            r = preview.at(final)
+            last = path.index[-1]
+            path.loc[last, ["price", "signal", "p_up", "lean", "stance"]] = [r["price"], r["signal"], r["p_up"], r["lean"], r["stance"]]
+        return path
+    return memo(ctx.lab, ("path", ctx.pool, day, tag), build)
 
 
 def _countdown(target: datetime, now: datetime) -> str:
@@ -69,6 +83,19 @@ def _status_bar(clock) -> None:
            f'<span class="fl-note" style="margin-left:0.6rem">New York <b>{clock.now:%a %H:%M}</b> · Adelaide <b>{now_adl:%a %H:%M}</b> · {nxt}</span></div>')
 
 
+def _explain(r: dict) -> str:
+    """One plain sentence so UP/DOWN and 'against a usual day' never look contradictory."""
+    p, base = r["p_up"], r["base_rate"]
+    if np.isnan(p):
+        return ""
+    side = "above" if p >= 0.5 else "below"
+    if r["stance"] == "usual":
+        return (f"That is {side} 50%, so the call is {r['lean']}, but only slightly: "
+                f"Apple rises on about {base:.0%} of days anyway, so this is close to an ordinary day.")
+    stronger = "more" if p > base else "less"
+    return f"That is {side} 50%, so the call is {r['lean']}, and {stronger} likely to rise than on an ordinary day."
+
+
 def _pipeline(ctx: Context, bar: dict, prev_close: pd.Series, r: dict, label: str) -> str:
     def move(t):
         return bar[f"{t}_Close"] / prev_close[f"{t}_Close"] - 1
@@ -82,7 +109,7 @@ def _pipeline(ctx: Context, bar: dict, prev_close: pd.Series, r: dict, label: st
                             f"Nasdaq-100 {T.signed_pct(move('QQQ'))} · MSFT {T.signed_pct(move('MSFT'))} · NVDA {T.signed_pct(move('NVDA'))}"),
         ("2", f"{r['used']} LLM factors recomputed", "Each readable formula is re-run on today's prices so far and compared with its own past."),
         ("3", "One signal", f"Average push of all factors: <b>{r['signal']:+.2f}</b> (0 = a usual day, above 0 leans up)."),
-        ("4", "Chance of an up day", f"<b>{T.pct(r['p_up'], 1)}</b> against a usual day's {T.pct(r['base_rate'], 1)}."),
+        ("4", "Chance of an up day", f"<b>{T.pct(r['p_up'], 1)}</b> against a usual day's {T.pct(r['base_rate'], 1)}. " + _explain(r)),
     ]
     rows = "".join(f'<div class="fl-step"><span class="fl-chip blue" style="min-width:1.6rem;text-align:center">{n}</span>'
                    f'<div><b>{escape(t)}</b><div class="fl-note">{d}</div></div></div>' for n, t, d in steps)
@@ -96,14 +123,13 @@ def _session_chart(path: pd.DataFrame, upto: int, day: pd.Timestamp, base_rate: 
     start = datetime.combine(day.date(), time(9, 30), tzinfo=NEW_YORK)
     end = datetime.combine(day.date(), time(16, 0), tzinfo=NEW_YORK)
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.55, 0.45], vertical_spacing=0.09,
-                        subplot_titles=("AAPL price", "Chance tomorrow is an up day, if the market closed then"))
+                        subplot_titles=("AAPL price", f"Chance tomorrow is an up day, if the market closed then · dotted line: a usual day ({base_rate:.0%})"))
     fig.add_trace(go.Scatter(x=shown["Time"], y=shown["price"], mode="lines", line=dict(color=T.INK, width=2),
                              hovertemplate="%{x|%H:%M} · $%{y:,.2f}<extra></extra>"), row=1, col=1)
     colour = [T.UP if p >= 0.5 else T.DOWN for p in shown["p_up"]]
     fig.add_trace(go.Scatter(x=shown["Time"], y=shown["p_up"], mode="lines+markers", line=dict(color=T.BLUE, width=2),
                              marker=dict(size=5, color=colour), hovertemplate="%{x|%H:%M} · %{y:.1%}<extra></extra>"), row=2, col=1)
-    fig.add_hline(y=base_rate, line=dict(color=T.INK2, width=1, dash="dot"), row=2, col=1,
-                  annotation_text=f"usual day {base_rate:.0%}", annotation_position="bottom right", annotation_font=dict(size=11, color=T.INK2))
+    fig.add_hline(y=base_rate, line=dict(color=T.INK2, width=1, dash="dot"), row=2, col=1)
     fig.add_hline(y=0.5, line=dict(color=T.AXIS, width=1), row=2, col=1)
     lo = min(path["price"].min(), shown["price"].min())
     hi = max(path["price"].max(), shown["price"].max())
@@ -136,9 +162,9 @@ def _pushes(ctx: Context, r: dict) -> str:
             f'<div class="fl-eyebrow" style="margin-top:0.9rem">Strongest single factors</div>{names}</div>')
 
 
-def _frame(ctx, slots, path, session, preview, day, i, label, key):
+def _frame(ctx, slots, path, session, preview, day, i, label, key, final=None):
     t = path["Time"].iloc[i]
-    bar = bar_so_far(session, t)
+    bar = final if (final is not None and i == len(path) - 1) else bar_so_far(session, t)
     r = preview.at(bar)
     prev_close = preview.history.iloc[-1]
     with slots[0].container():
@@ -208,20 +234,20 @@ def _replay(ctx: Context) -> None:
     pick = st.select_slider("Or drag through the day", options=list(range(len(path))), value=len(path) - 1,
                             format_func=lambda i: f"{path['Time'].iloc[i]:%H:%M}", key="replay_pick")
     slots = _layout()
+    final = _official_bar(ctx, day)
     label = "If the market closed at {t:%H:%M} New York"
     if play:
         for i in range(len(path)):
-            _frame(ctx, slots, path, session, preview, day, i, label, "replay")
+            _frame(ctx, slots, path, session, preview, day, i, label, "replay", final)
             clock_time.sleep(STEP_PAUSE)
         pick = len(path) - 1
-    r = _frame(ctx, slots, path, session, preview, day, pick, label, "replay_end")
+    r = _frame(ctx, slots, path, session, preview, day, pick, label, "replay_end", final)
     if pick == len(path) - 1:
         official = ctx.lab.calls(ctx.lab.signal(ctx.members["key"])).loc[day] if day in ctx.lab.index else None
         same = official is not None and abs(official["p_up"] - r["p_up"]) < 1e-6
         T.verdict(f"<b>16:00, the session closes.</b> The last step is the official call for {next_day:%A %d %B}: "
                   f"<b>{r['lean']} at {T.pct(r['p_up'], 1)}</b>"
-                  + (", the same number the Today page shows. ✓" if same and tag == "real" else
-                     ". It matches the Today page exactly when real 5-minute prices are used." if tag != "real" else "."))
+                  + (", the same number the Today's call page shows ✓" if same else "."))
 
 
 def render(ctx: Context) -> None:
