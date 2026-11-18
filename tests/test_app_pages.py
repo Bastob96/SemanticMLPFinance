@@ -12,11 +12,11 @@ def _page(view: str, state: dict):
 
         from src.app import theme
         from src.app.state import sidebar
-        from src.app.views import factors, formula, method, research, today, track
+        from src.app.views import factors, formula, live, method, research, today, track
 
         st.session_state.setdefault("mode", "saved")
         theme.apply()
-        {"today": today, "track": track, "factors": factors, "research": research, "formula": formula, "method": method}[view].render(sidebar())
+        {"live": live, "today": today, "track": track, "factors": factors, "research": research, "formula": formula, "method": method}[view].render(sidebar())
 
     at = AppTest.from_function(script, kwargs={"view": view}, default_timeout=300)
     for key, value in state.items():
@@ -26,7 +26,7 @@ def _page(view: str, state: dict):
     return at
 
 
-@pytest.mark.parametrize("view", ["today", "track", "factors", "research", "formula", "method"])
+@pytest.mark.parametrize("view", ["live", "today", "track", "factors", "research", "formula", "method"])
 def test_page_runs(view):
     at = _page(view, {})
     assert len(at.title) == 1
