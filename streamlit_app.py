@@ -1,4 +1,8 @@
-"""Interactive, read-only presentation of SemanticMLPFinance results."""
+"""Interactive presentation of SemanticMLPFinance results.
+
+All pages are read only views of frozen outputs except Live prediction, which
+downloads current prices and is clearly labelled as separate.
+"""
 
 from __future__ import annotations
 
@@ -6,6 +10,7 @@ import streamlit as st
 
 from src.ui import load_dashboard_data
 from src.ui.components import inject_theme
+from src.ui.live import live
 from src.ui.pages import backtests, methodology, overview, stage1, stage2
 
 st.set_page_config(
@@ -35,13 +40,14 @@ with st.sidebar:
     st.caption("AAPL next-day direction research")
     page = st.radio(
         "Navigate",
-        ["Overview", "Stage 1", "Backtests", "Stage 2", "Methodology"],
+        ["Overview", "Stage 1", "Backtests", "Stage 2", "Live prediction", "Methodology"],
         label_visibility="collapsed",
     )
     st.divider()
     st.markdown("**Artifact status**")
     st.success("Frozen & reproducible", icon="✅")
     st.caption("2022–2025 · daily OHLCV · Q4 locked")
+    st.caption("Live prediction page: current prices, separate from the frozen results")
     st.caption(f"Source `{dashboard.manifest['source_commit'][:10]}`")
     st.divider()
     st.caption("Research use only · Not investment advice")
@@ -51,6 +57,7 @@ PAGES = {
     "Stage 1": stage1,
     "Backtests": backtests,
     "Stage 2": stage2,
+    "Live prediction": live,
     "Methodology": methodology,
 }
 PAGES[page](dashboard)
