@@ -41,7 +41,7 @@ What we delivered:
    backtester.
 2. **Stage 2:** an automated LLM factor search, plus the controls needed to tell a real result from luck.
 3. **Factor Lab:** a deployed app that makes a live next-day call from LLM factors and shows its full track record.
-4. **Team dashboard:** a second Streamlit app with the Stage 1 and Stage 2 results and a live prediction page.
+4. **Team dashboard:** a second Streamlit app with the pinned Stage 1 and Stage 2 results. Its live prediction page is in pull request #10, still open.
 
 ## 2. Who owns what
 
@@ -51,7 +51,7 @@ What we delivered:
 | Kevin Varghese | Stage 1 features, models and training. Stage 2 training with the accepted factors. | `src/features/`, `src/models/`, `experiments/run_stage1_training.py`, `experiments/run_stage2_training.py` |
 | Taiyu Shi | Data download. A separate LLM loop on a return-regression model (HGBR). | `data/`, `phase2_llm_loop—— Taiyu Shi/` |
 | Leyao Chang | Data cleaning. Structured candidate generation and eight reference factors. | `data/processed/`, `Stage2_Factor_Files/` |
-| Nikhil Nakade | Risk register. Team dashboard and its live page. | `streamlit_app.py`, `src/ui/` |
+| Nikhil Nakade | Risk register. Team dashboard; its live page is in open pull request #10. | `streamlit_app.py`, `src/ui/` |
 
 ## 3. How the system fits together
 
@@ -254,7 +254,7 @@ python -m pip install -r requirements.txt
 python -m pytest -q
 ```
 
-Result on 20 Nov 2026, on `main` with every branch merged: **122 passed** (Python 3.13, scikit-learn 1.9.1). The research numbers were produced with scikit-learn 1.7.2, which is why it is pinned; the tests pass on both.
+Result on 20 Nov 2026, on `main` after the final merge: **98 passed** (Python 3.13, scikit-learn 1.9.1). With the open pull request #10 added as well, 122 pass. The research numbers were produced with scikit-learn 1.7.2, which is why it is pinned; the tests pass on both.
 
 | Test file | What it checks |
 |---|---|
@@ -268,7 +268,7 @@ Result on 20 Nov 2026, on `main` with every branch merged: **122 passed** (Pytho
 | `test_app_engine.py` | Factor Lab: cutting the future off the price file changes nothing for earlier dates; directions use known outcomes only; a planted factor is found; random numbers score about 0.50. |
 | `test_app_live.py` | Market clock and holidays; the live preview at the close equals the official call; no later days are used. |
 | `test_app_pages.py` | Every Factor Lab page runs for every factor set, in replay mode and with an invalid formula. |
-| `test_ui_app.py`, `test_ui_data.py`, `test_ui_live.py` | Team dashboard pages, data loading and its live page. |
+| `test_ui_app.py`, `test_ui_data.py` | Team dashboard pages and data loading. |
 
 Each Stage 2 run folder in `results/stage2/` keeps every prompt, raw LLM reply, scoreboard and kept factor, so
 any run can be checked or replayed without calling the LLM again (`--proposer replay`).
@@ -293,7 +293,7 @@ any run can be checked or replayed without calling the LLM again (`--proposer re
 ## 13. Version control and tracking
 
 **Git.** One shared repository on GitHub, public. More than 90 commits on `main` from all five members between 27 Aug and
-20 Nov 2026. Work happens on branches and reaches `main` through pull requests (#1 to #11, plus the final merges on 20 Nov). Branches: `abu/stage2-loop` (Stage 2 and Factor Lab, also what the live app deploys from),
+20 Nov 2026. Work happens on branches and reaches `main` through pull requests (#1 to #11, plus the final merge on 20 Nov; #10 is still open). Branches: `abu/stage2-loop` (Stage 2 and Factor Lab, also what the live app deploys from),
 `feature/stage1-baseline-training`, `feature/live-page-claude-factor` and others. 25 commits are authored by
 Claude (Anthropic), used as a coding assistant on the Stage 2 and Factor Lab code; each of them carries a
 co-author line and was pushed by Abu.
