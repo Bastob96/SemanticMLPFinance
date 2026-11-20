@@ -3,6 +3,13 @@
 Interpretable financial factor discovery for next-trading-day AAPL prediction
 using machine learning and LLMs.
 
+**Start here:** [`docs/DESIGN.md`](docs/DESIGN.md) is the design and supporting documentation for the whole
+project: workflow, decisions, assumptions, tests, debugging notes, libraries and references.
+
+- Factor Lab (live app): https://llm-factor-lab.streamlit.app (`streamlit run app.py`)
+- Team dashboard: `streamlit run streamlit_app.py`
+- Tests: `python -m pytest -q`
+
 ## Factor Lab: live call from LLM-proposed factors
 
 Built by **Abu Wakkas Bastob**, who also designed and ran the Stage 2 LLM factor search (`src/stage2/`), the direction test and the checks behind it. Live app: https://llm-factor-lab.streamlit.app

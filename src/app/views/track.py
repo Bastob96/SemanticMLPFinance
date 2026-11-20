@@ -120,7 +120,11 @@ def render(ctx: Context) -> None:
     periods = lab.periods()
     period = st.segmented_control("Days", list(periods), default=list(periods)[0], key="period", label_visibility="collapsed") or list(periods)[0]
     mask = periods[period]
-    score = lab.score(ctx.calls, mask)
+    key = ("score", ctx.pool, ctx.stated, period)
+    if key not in lab.memo:                     # the luck test (2,000 shuffles) runs once per period, then is remembered
+        with st.spinner(f"Scoring every call in \"{period}\" and running the luck test (a few seconds, first time only)..."):
+            lab.memo[key] = lab.score(ctx.calls, mask)
+    score = lab.memo[key]
     if score["days"] < 20 or "auc" not in score:
         st.info("Too few scored days in this period.")
         return
